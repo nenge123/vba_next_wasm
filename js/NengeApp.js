@@ -493,7 +493,7 @@ let NengeApp = new class {
             },
             'UpdateRoom': cb => {
                 return new Promise((ok, erro) => {
-                if (!this.isRun){
+                if (!this.isRun || this.CONFIG.lastgame == ''){
                     (typeof cb == 'function')&&cb(result);
                     return ok(false);
                 }
@@ -759,10 +759,10 @@ let NengeApp = new class {
             'delete': async e => {
                 let elm = e.target,
                     name = elm.getAttribute('data-keyname');
-                if(name == this.GameName)return alert('你正在玩着呢！');
                 this.BtnMap['db']['Delete'](name, 'room');
                 this.BtnMap['db']['Delete'](name, 'info', result => {
                     console.log(result);
+                    if(name == this.GameName){this.setConfig({lastgame:''});location.reload();};
                     document.querySelector(`.gba-result-roomlist[data-keyname="${name}"`).remove();
                 });
 
