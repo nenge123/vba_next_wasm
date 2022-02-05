@@ -922,7 +922,7 @@ let NengeApp = new class {
                                 return;
                             }
                             havesize += value.length;
-                            N.MSG('<h3>请稍等！</h3>' + N.CoreFile + '<br><button data-btn="">已下载:' + havesize + '/' + downsize + '</button>');
+                            N.MSG('<h3>请稍等！</h3>' + N.CoreFile + '<br><button data-btn="">已下载: ' + (Math.ceil(havesize/downsize*100)) + '% 速度：'+Math.ceil(value.length/1024)+'KB</button>');
                             // 取得数据并将它通过controller发送给浏览器
                             controller.enqueue(value);
                             push();
