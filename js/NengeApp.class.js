@@ -198,6 +198,9 @@ new class {
     constructor(N) {
         N.ELM = this;
         this.config = e => N.CONFIG[e];
+        if(this.config('do-hideui')){
+            document.querySelector('.gba-ctrl').classList.add('hideui');
+        }
     }
     BAIDU_HTML(translate) {
         return `<div class="gba-list-translate"><h3>翻译API 目前使用百度</h3><p>申请地址:<a href="https://api.fanyi.baidu.com/product/22">https://api.fanyi.baidu.com/product/22</a></p><p>申请成功后点击<a href="https://api.fanyi.baidu.com/manage/developer">开发者信息</a></p>` +
@@ -311,6 +314,8 @@ new class {
             "do-getinfo": "信息下载",
             "do-sw": "离线开关",
             "do-loop": "画面继续",
+            "do-hideui": "UI开关",
+            "do-record": "录制视频",
         },
         "文件处理": {
             "游戏": {
@@ -347,11 +352,14 @@ new class {
     };
     ABOUT = '<div class="gba-about"><h3>说明</h3>'
     +'<p class="gba-tl"><b>作弊代码:</b>目前测试成功的只有 类似这种"F3A9A86D 4E2629B4" 如果代码前面有#那么该行不会生效！</p>'
-    +'<p class="gba-tl"><b>翻译API:</b>目前的跨域接口是我直接搭建的，如果我的服务器到期将无法使用，有兴趣搭建并分享请到<a href="https://github.com/nenge123/vba_next_wasm/issues" target="_blank">https://github.com/nenge123/vba_next_wasm/issues</a></p>'
+    +'<p class="gba-tl"><b>翻译API:</b>目前的跨域接口是我之前服务搭建的的，如果我的服务器到期将无法使用，如果资源的朋友，不妨共享个接口。</p>'
+    +'<p>有兴趣搭建并分享请到<a href="https://github.com/nenge123/vba_next_wasm/issues" target="_blank">https://github.com/nenge123/vba_next_wasm/issues</a></p>'
     +'<p class="gba-tl"><b>离线开关:开启后,即便无网络也会运行，相反不会再更新最新文件。</b></p>'
     +'<p class="gba-tl"><b>快照:</b>保存当前的room的默认初始状态</p>'
     +'<p class="gba-tl"><b>RTC:</b>必须首次运行绿宝石或者红宝石,如果默认启动了怎么办？点击“刷新”按钮即可。</p>'
     +'<p class="gba-tl"><b>手柄设置:</b>请根据右侧提示设置</p>'
+    +'<p class="gba-tl"><h3>视频录制:</h3>无声音的，不要问原因，我这三流水平折腾了好几天，结果还是得个吉，那就把这个吉送给各位吧，祝各位玩的开心，新娘大吉大利。凑合着用吧。</p>'
+    +'<p><br><br><br><br><br><img src="zan.jpg" title=""></p>'
             +'</div>';
 }(NengeApp);
 /**

@@ -1,5 +1,5 @@
 let NengeApp = new class {
-    version = 7.15;
+    version = 7.16;
     CoreFile = "wasm/vbanext-wasm.7z";
     Core7z = "js/extract7z.min.js";
     CoreZip = "js/jszip.js";
@@ -14,6 +14,7 @@ let NengeApp = new class {
     CoreFileName = this.CoreFile.split('/').pop();
     constructor() {
         this.setConfig({});
+        this.CONFIG['do-record'] = false;
         this.initDB();
     }
     DB = new class {
@@ -210,6 +211,24 @@ let NengeApp = new class {
                 this.Module.resumeMainLoop();
                 this.BtnMap['closelist']();
             },
+            'hideui':e=>{
+                this.BtnMap['closelist']();
+                let ctrl = document.querySelector('.gba-ctrl').classList;
+                ctrl.toggle('hideui');
+                this.setConfig({'do-hideui':ctrl.contains('hideui')});
+            },
+            'record':e=>{
+                if (!this.isRun || !this.GameName) return;
+                this.BtnMap['closelist']();
+                let record = this.Record;
+                if(this.CONFIG['do-record']){
+                    this.setConfig({'do-record':false});
+                    record.stop();
+                }else{
+                    this.setConfig({'do-record':true});
+                    record.start();
+                }
+            }
         },
         'sw':{
             'clear':e=>{
@@ -339,7 +358,7 @@ let NengeApp = new class {
                     });
                     this.BtnMap['closelist']();
                 } else {
-                    alert('appid和密匙不能留空！');
+                    return ;
                 }
             },
             'show': e => {
@@ -413,7 +432,7 @@ let NengeApp = new class {
                     // console.log(v)
                     // '<pre>'+v&&v.data&&v.data.sumDst||v.error_msg+'</pre>',true)
                 ).catch(
-                    e => alert('很遗憾!翻译功能要跨域!')
+                    e => this.MSG('很遗憾!翻译功能要跨域!')
                 );
             },
         },
@@ -545,7 +564,7 @@ let NengeApp = new class {
 
             },
             'GetRoom': (name, isdown) => {
-                if (name == this.CoreFileName) return alert('核心文件不是游戏文件！');
+                if (name == this.CoreFileName) return this.MSG('核心文件不是游戏文件！');
                 this.DB({
                     method: 'get',
                     name,
@@ -749,7 +768,7 @@ let NengeApp = new class {
                     Name = Name.target, Name = Name.getAttribute('data-keyname');
                 }
                 if (Name == this.CoreFileName) {
-                    return alert('核心文件不是游戏文件！');
+                    return this.MSG('核心文件不是游戏文件！');
                 }
                 console.log(Name);
                 if (!Name || this.GameName == Name) return;
@@ -849,11 +868,9 @@ let NengeApp = new class {
     upload(cb) {
         return;
     }
-    download(buf, name) {
+    download(buf, name,mime) {
         let a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([buf], {
-            type: 'application/octet-stream'
-        }));
+        a.href = URL.createObjectURL(new Blob(buf instanceof Array ? buf:[buf], mime||{type: 'application/octet-stream'}));
         a.download = name || this.GameName;
         a.click();
         a = null;
@@ -1046,6 +1063,34 @@ let NengeApp = new class {
             w.postMessage({"data": [{name,content}],password});
         });
 
+    }
+    get Record(){
+        if(this._Record) return this._Record;
+            let Mime;
+            [
+                'video/webm; codecs=h264',
+                'video/webm; codecs=vp9',
+                'video/webm; codecs=vp8',
+                'video/webm; codecs=vp9.0',
+                'video/webm; codecs=vp8.0',
+                'video/webm; codecs=avc1',
+            ].forEach(
+            val=>{
+                if(!Mime&&MediaRecorder.isTypeSupported(val))Mime = val;
+            });
+            let videoSteam = this.Module.canvas.captureStream(30),
+                BLOBdata = [],
+                recorder = new MediaRecorder(videoSteam, {'mimeType':Mime});
+            recorder.ondataavailable = e=>{
+                BLOBdata.push(e.data);
+            };
+            recorder.onstop = (e)=>{
+                if(BLOBdata.length<1) return;
+                this.download(BLOBdata,'record.'+(Mime.split('\/')[1].split(';')[0]),{'type':Mime})
+                BLOBdata = [];
+            };
+            this._Record = recorder;
+            return recorder;
     }
     setConfig(data) {
         if (data) {

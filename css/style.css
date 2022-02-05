@@ -428,6 +428,7 @@
     width: 36px;    border: 1px solid #dfd5d554;
     border-radius: 10px;    background: #ffffff14;
         }
+        .gba-ctrl.hideui .vk{display: none !important;}
         @media screen and (max-width:600px) {
             .gba-ctrl {
                 position: relative;
