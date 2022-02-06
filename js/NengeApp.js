@@ -1,5 +1,5 @@
 let NengeApp = new class {
-    version = 7.20;
+    version = 7.21;
     CoreFile = "wasm/vbanext-wasm.7z";
     Core7z = "js/extract7z.min.js";
     CoreZip = "js/jszip.js";

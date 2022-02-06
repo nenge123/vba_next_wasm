@@ -722,7 +722,7 @@ new class {
                             }
                         }
                     }
-                    this.stopEvent(event,1);
+                    this.stopEvent(event);
                 } else {
                     if (type == "mouseup") {
                         this.mousedownHold = false;
@@ -730,7 +730,7 @@ new class {
                         this.mousedownHold = true;
                         keyState[this.KEY.get(key)] = 1;
                         this.KEY.SetState(keyState);
-                        return this.stopEvent(event,1);
+                        return this.stopEvent(event);
                     }
                 }
             }
