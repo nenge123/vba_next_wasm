@@ -1,7 +1,7 @@
 let CACHE_NAME = 'NengeApp_VBA';
 let urlsToCache = [
     './js/NengeApp.min.js',
-    './css/style.css',
+    './css/style.min.css',
     './js/dexie.worker.js',
 	'./icon/gba2.png',
     './manifest.json',
