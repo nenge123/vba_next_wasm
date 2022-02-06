@@ -220,14 +220,18 @@ let NengeApp = new class {
             'record':e=>{
                 if (!this.isRun || !this.GameName) return;
                 this.BtnMap['closelist']();
-                let record = this.Record;
-                if(!record) return;
+                if(!this.Record) {
+                    this.setConfig({'do-record':false});
+                    this.MSG('<h3>错误</h3>不能录屏<br>当前浏览器不支持<br>MediaRecorder API<br>请停止使用。</h3>');
+                    return
+                };
                 if(this.CONFIG['do-record']){
                     this.setConfig({'do-record':false});
-                    record.stop();
+                    this.Record.stop();
                 }else{
                     this.setConfig({'do-record':true});
-                    record.start();
+                    this.MSG('<button data-btn>录屏已开始</button>',true);
+                    this.Record.start();
                 }
             }
         },
