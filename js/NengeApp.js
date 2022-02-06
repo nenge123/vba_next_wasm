@@ -1,5 +1,5 @@
 let NengeApp = new class {
-    version = 7.16;
+    version = 7.17;
     CoreFile = "wasm/vbanext-wasm.7z";
     Core7z = "js/extract7z.min.js";
     CoreZip = "js/jszip.js";
@@ -221,6 +221,7 @@ let NengeApp = new class {
                 if (!this.isRun || !this.GameName) return;
                 this.BtnMap['closelist']();
                 let record = this.Record;
+                if(!record) return;
                 if(this.CONFIG['do-record']){
                     this.setConfig({'do-record':false});
                     record.stop();
@@ -427,7 +428,7 @@ let NengeApp = new class {
                         if (v && v.data) {
                             msg = v.data.sumDst ? v.data.sumDst.replace(/\n/g, '<br>') : v.error_msg;
                         }
-                        this.MSG('<div class="gba-result-translate">' + msg + '</div>')
+                        this.MSG('<div class="gba-translate-show">' + msg + '</div>')
                     }
                     // console.log(v)
                     // '<pre>'+v&&v.data&&v.data.sumDst||v.error_msg+'</pre>',true)
@@ -782,7 +783,7 @@ let NengeApp = new class {
                 this.BtnMap['db']['Delete'](name, 'info', result => {
                     console.log(result);
                     if(name == this.GameName){this.setConfig({lastgame:''});location.reload();};
-                    document.querySelector(`.gba-result-roomlist[data-keyname="${name}"`).remove();
+                    document.querySelector(`.gba-roomslist[data-keyname="${name}"`).remove();
                 });
 
             },
@@ -1065,7 +1066,7 @@ let NengeApp = new class {
 
     }
     get Record(){
-        if(this._Record) return this._Record;
+        if(this._Record != undefined) return this._Record;
             let Mime;
             [
                 'video/webm; codecs=h264',
@@ -1078,19 +1079,26 @@ let NengeApp = new class {
             val=>{
                 if(!Mime&&MediaRecorder.isTypeSupported(val))Mime = val;
             });
-            let videoSteam = this.Module.canvas.captureStream(30),
-                BLOBdata = [],
-                recorder = new MediaRecorder(videoSteam, {'mimeType':Mime});
+            if(!Mime){
+                this._Record = false;
+                return;
+            }
+            let recorder = new MediaRecorder(this.Module.canvas.captureStream(30), {'mimeType':Mime});
+            if(!recorder || !recorder.stream){
+                this._Record = false;
+                return;
+            }
+            recorder.BLOBdata = [];
             recorder.ondataavailable = e=>{
-                BLOBdata.push(e.data);
+                recorder.BLOBdata.push(e.data);
             };
             recorder.onstop = (e)=>{
-                if(BLOBdata.length<1) return;
-                this.download(BLOBdata,'record.'+(Mime.split('\/')[1].split(';')[0]),{'type':Mime})
-                BLOBdata = [];
+                if(recorder.BLOBdata.length<1) return;
+                this.download(recorder.BLOBdata,this.GetName('webm'),{'type':'video/webm'})
+                recorder.BLOBdata = [];
             };
             this._Record = recorder;
-            return recorder;
+            return this._Record;
     }
     setConfig(data) {
         if (data) {

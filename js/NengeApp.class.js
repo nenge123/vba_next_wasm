@@ -203,7 +203,7 @@ new class {
         }
     }
     BAIDU_HTML(translate) {
-        return `<div class="gba-list-translate"><h3>翻译API 目前使用百度</h3><p>申请地址:<a href="https://api.fanyi.baidu.com/product/22">https://api.fanyi.baidu.com/product/22</a></p><p>申请成功后点击<a href="https://api.fanyi.baidu.com/manage/developer">开发者信息</a></p>` +
+        return `<div class="gba-translate-set"><h3>翻译API 目前使用百度</h3><p>申请地址:<a href="https://api.fanyi.baidu.com/product/22">https://api.fanyi.baidu.com/product/22</a></p><p>申请成功后点击<a href="https://api.fanyi.baidu.com/manage/developer">开发者信息</a></p>` +
             `<p><label>APPID:<input type="text" class="gba-translate-id" tabindex="1" value="${translate.id||''}"></label></p>` +
             `<p><label>密 钥：<input type="text" class="gba-translate-key" tabindex="2" value="${translate.key||''}"></label></p>` +
             `<p><label>来 源：<input type="text" class="gba-translate-from" tabindex="3" value="${translate.from||'auto'}"></label></p>` +
@@ -219,12 +219,12 @@ new class {
             let room = rooms[name],
             dataKey = ` data-keyname="${room.name}"`,
             title = room.title||room.name;
-            HTML +=  `<div class="gba-result-roomlist" ${dataKey}><h3>${title}</h3><img src="${room.img? `data:image/jpeg;base64,${window.btoa(String.fromCharCode.apply(null,room.img))}`:`icon/gba2.png`}" title="${room.name}" alt="${name}"><p>${room.time.toLocaleString()}</p><p class="gba-result-roomctr"><button type="button" data-btn="${mode}-load" ${dataKey}>${room.title?'读取':'打开'}</button> | <button type="button" data-btn="${mode}-down" ${dataKey}>下载</button>${room.title?'':` | <button type="button" data-btn="${mode}-delete" ${dataKey}>删除</button>`}</p></div>`;;
+            HTML +=  `<div class="gba-roomslist" ${dataKey}><h3>${title}</h3><img src="${room.img? `data:image/jpeg;base64,${window.btoa(String.fromCharCode.apply(null,room.img))}`:`icon/gba2.png`}" title="${room.name}" alt="${name}"><p>${room.time.toLocaleString()}</p><p class="gba-result-roomctr"><button type="button" data-btn="${mode}-load" ${dataKey}>${room.title?'读取':'打开'}</button> | <button type="button" data-btn="${mode}-down" ${dataKey}>下载</button>${room.title?'':` | <button type="button" data-btn="${mode}-delete" ${dataKey}>删除</button>`}</p></div>`;;
         }
-        return `${tophtml}<div class="gba-result-rooms">${HTML}</div>${tophtml}`+this.ABOUT;
+        return `${tophtml}<div class="gba-rooms">${HTML}</div>${tophtml}`+this.ABOUT;
     }
     KEY_HTML(Keyboard, KeyboardIndex) {
-        let HTML = '<h3>键位 ESC加速 Backspace重启</h3><table border="1" class="gba-result-table"><tr><th>键位</th><th>键值</th><th>键值</th></tr>',
+        let HTML = '<h3>键位 ESC加速 Backspace重启</h3><table border="1" class="gba-table"><tr><th>键位</th><th>键值</th><th>键值</th></tr>',
             Keyboard_html = index => {
                 return `<td><input type="text" value="${Keyboard[index]}" data-key-index="${index}" tabindex="${index+1}" required></td>`;
             };
@@ -236,7 +236,7 @@ new class {
     }
     GAMEPAD_HTML(KeyGamePad, KeyGamePadMap, KeyMap) {
         let HTML = '<div class="gba-flex" style="align-items: flex-start;"><div class="gba-list-pad"><h3>手柄参数,基于我的廉价PS4手柄（百元不到）</h3>' +
-            '<table border="1" class="gba-result-table"><tr><th>键位</th><th>键值</th></tr>';
+            '<table border="1" class="gba-table"><tr><th>键位</th><th>键值</th></tr>';
         for (let i in KeyGamePadMap) {
             if (i == 'length') continue;
             let num = Number(i)+1;
@@ -260,7 +260,7 @@ new class {
                     HTML += `<button type="button" data-btn="${key}"${active?' class="active"':''}>${value}</button>`;
                 } else if (value instanceof Array) {
                     if (value[0] == 'radio') {
-                        HTML += ` <div class="gba-action-top">${key}:`;
+                        HTML += ` <div class="gba-w100m5">${key}:`;
                         for (let index = value[3]; index < value[4]; index++) {
                             HTML += `<label><input type="${value[0]}" name="${value[1]}" value="${index}" data-state-key="${index}" ${this.config(value[1])==index?'checked = true':''}>${value[2]}${index}</label>`;
                         }
@@ -275,7 +275,7 @@ new class {
 
                     }
                 } else {
-                    HTML += ` <div class="gba-action-op">${key}:`;
+                    HTML += ` <div class="gba-w50m5">${key}:`;
                     for (let subkey in value) {
                         HTML += func(subkey, value[subkey]) + '&nbsp;&nbsp;&nbsp;';
                     }
@@ -284,7 +284,7 @@ new class {
                 return HTML;
             };
         for (let name in this.MENU_DATA) {
-            HTML += `<h3 class="gba-action-top">${name}</h3><div class="gba-action-top gba-flex">`;
+            HTML += `<h3 class="gba-w100m5">${name}</h3><div class="gba-w100m5 gba-flex">`;
             let MENU_DATA = this.MENU_DATA[name];
             if (MENU_DATA instanceof Array) {
                 HTML += func(key, MENU_DATA);
@@ -358,7 +358,7 @@ new class {
     +'<p class="gba-tl"><b>快照:</b>保存当前的room的默认初始状态</p>'
     +'<p class="gba-tl"><b>RTC:</b>必须首次运行绿宝石或者红宝石,如果默认启动了怎么办？点击“刷新”按钮即可。</p>'
     +'<p class="gba-tl"><b>手柄设置:</b>请根据右侧提示设置</p>'
-    +'<p class="gba-tl"><h3>视频录制:</h3>无声音的，不要问原因，我这三流水平折腾了好几天，结果还是得个吉，那就把这个吉送给各位吧，祝各位玩的开心，新娘大吉大利。凑合着用吧。</p>'
+    +'<p class="gba-tl"><h3>视频录制:</h3>无声音的，不要问原因，我这三流水平折腾了好几天，结果还是得个吉，那就把这个吉送给各位吧，祝各位玩的开心，新年大吉大利。凑合着用吧。</p>'
     +'<p><br><br><br><br><br><img src="zan.jpg" title=""></p>'
             +'</div>';
 }(NengeApp);
