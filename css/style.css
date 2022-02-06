@@ -2,7 +2,6 @@
             padding: 0px;
             margin: 0px;
         }
-
         .gba-body {
             width: 100vw;
             height: 100vh;
@@ -16,9 +15,11 @@
             left: 0px;
             top: 0px;
             z-index: 10000;
+            touch-action: none;
         }
 
         .gba-pic {
+            aspect-ratio: 240/160;
             max-height: 100%;
             width: 100%;
             z-index: 9999;
@@ -63,8 +64,6 @@
         .gba-list-title {
             list-style: auto;
             font-size: 16px;
-            margin: 5px;
-            padding: 10px;
             background-color: #ffffffdc;
             word-break: break-all;
         }
@@ -77,15 +76,21 @@
 
         .gba-list-title {
             margin: 0px;
+            padding: 15px;
             width: 10px;
             font-size: 12px;
             writing-mode: vertical-lr;
             align-items: stretch;
+            touch-action: none;
         }
 
         .gba-result {
+            margin: 0px 5px 0px 0px;
+            padding: 10px 35px 10px 5px;
             flex-grow: 1;
             overflow: auto !important;
+            width: calc(100% - 80px);
+            overflow-x: hidden !important;
             font-size: 12px;
         }
 
@@ -107,6 +112,7 @@
             margin: 10px 0px;
             font-weight: 400;
             color: #FFF;
+            touch-action: none;
             border: #000 1px solid;
         }
 
@@ -328,9 +334,21 @@
             background: #ffffff14;
         }
 
-        .gba-ctrl.hideui .vk {
-            display: none !important;
+        .gba-ctrl.hideui .vk,
+        .gba-ctrl.hideui .gba-menu-btn{
+            display: none;
         }
+        .gba-ctrl.hideui .gba-menu-btn[data-btn="do-settings"]{
+            display: block;
+            position: absolute;
+            left: 20px;
+            top: 20px;
+        }
+        .gba-ctrl.hideui .gba-ctrl-menu{
+            position: static !important;
+            display: inline-block;
+        }
+
 
         .vk {
             position: absolute;
@@ -343,6 +361,7 @@
             border: 1px #fff solid;
             border-radius: 25%;
             line-height: 150%;
+            touch-action: none;
         }
 
         .vk.active {

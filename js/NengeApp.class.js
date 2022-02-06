@@ -3,7 +3,7 @@
  */
 new class {
     TOTAL_MEMORY = 0x10000000;
-    noInitialRun = !0x0;
+    noInitialRun = !0;
     SRM_POS = 658768;
     SRM_LEN = 131072;
     SRM_XLEN = 139264;
@@ -13,9 +13,9 @@ new class {
     CanvasHeight = 400;
     arguments = [];
     preRun = [];
-    postRun = [e => console.log(e)];
+    postRun = [];
     print = e => console.log(e);
-    printErr = e => console.warn(e);
+    printErr = e => console.log(e);
     totalDependencies = 0;
     monitorRunDependencies = e => console.log("屏幕初始化");
     onRuntimeInitialized = e => console.log("就绪!加载游戏!");
@@ -224,14 +224,14 @@ new class {
         return `${tophtml}<div class="gba-rooms">${HTML}</div>${tophtml}`+this.ABOUT;
     }
     KEY_HTML(Keyboard, KeyboardIndex) {
-        let HTML = '<h3>键位 ESC加速 Backspace重启</h3><table border="1" class="gba-table"><tr><th>键位</th><th>键值</th><th>键值</th></tr>',
+        let HTML = '<div class="gba-keyMap"><h3>键位 ESC加速 Backspace重启 TAB 翻译 F1读取 F4记录</h3><table border="1" class="gba-table"><tr><th>键位</th><th>键值</th><th>键值</th></tr>',
             Keyboard_html = index => {
                 return `<td><input type="text" value="${Keyboard[index]}" data-key-index="${index}" tabindex="${index+1}" required></td>`;
             };
         for (let i = 0; i < KeyboardIndex.length; i++) {
             HTML += `<tr><td>${KeyboardIndex[i].toLocaleUpperCase()}</td>${Keyboard_html(i)+Keyboard_html(i + 10)}</tr>`;
         }
-        HTML += '</table><button type="button" data-btn="key-save">保存键值</button> | |<button type="button" data-btn="key-reset">恢复默认</button>';
+        HTML += '</table><button type="button" data-btn="key-save">保存键值</button> | |<button type="button" data-btn="key-reset">恢复默认</button></div>';
         return HTML;
     }
     GAMEPAD_HTML(KeyGamePad, KeyGamePadMap, KeyMap) {
@@ -320,7 +320,8 @@ new class {
         "文件处理": {
             "游戏": {
                 "state-load": "即读",
-                "state-save": "即存"
+                "state-save": "即存",
+                "translate-load": "翻译"
             },
             "重设": {
                 "do-reset": "重启",
@@ -358,7 +359,7 @@ new class {
     +'<p class="gba-tl"><b>快照:</b>保存当前的room的默认初始状态</p>'
     +'<p class="gba-tl"><b>RTC:</b>必须首次运行绿宝石或者红宝石,如果默认启动了怎么办？点击“刷新”按钮即可。</p>'
     +'<p class="gba-tl"><b>手柄设置:</b>请根据右侧提示设置</p>'
-    +'<p class="gba-tl"><h3>视频录制:</h3>无声音的，不要问原因，我这三流水平折腾了好几天，结果还是得个吉，那就把这个吉送给各位吧，祝各位玩的开心，新年大吉大利。凑合着用吧。</p>'
+    +'<p class="gba-tl"><h3>视频录制:只有电脑可用！</h3>无声音的，不要问原因，我这三流水平折腾了好几天，结果还是得个吉，那就把这个吉送给各位吧，祝各位玩的开心，新年大吉大利。凑合着用吧。</p>'
     +'<p><br><br><br><br><br><img src="zan.jpg" title=""></p>'
             +'</div>';
 }(NengeApp);
@@ -444,7 +445,9 @@ new class {
             this.Module.ROOM_POS += u8.length + 32;
             this.FS['createDataFile']('/', this.gameName, new Uint8Array(u8), !0x0, !0x1);
             this.AddSRM(srm, state, true);
-            this.Module['callMain'](['/' + this.gameName, "2b35cacf70aef5cbb3f38c0bb20e488cc8ad0c350400499a0"]);
+            let GameInfo = ['/' + this.gameName, "2b35cacf70aef5cbb3f38c0bb20e488cc8ad0c350400499a0"];
+            'undefined' != typeof EJS_DEBUG_XX && !0 === EJS_DEBUG_XX && GameInfo.unshift('-v');
+            this.Module.callMain(GameInfo);
             this.SetShader();
             this.loadState(true);
             this.Module.resumeMainLoop();
@@ -506,6 +509,13 @@ new class {
 new class {
     constructor(N) {
         this.BTN = N.BtnMap;
+        this.RUNBTN = e=>{
+            let s = e.split('-');
+            if(this.BTN[s[0]]){
+                if(s[1])this.BTN[s[0]][s[1]]();
+                else this.BTN[s[0]]();
+            }
+        };
         if(N.CONFIG['KeyGamePad'])N.KEY.KeyGamePad = N.CONFIG['KeyGamePad'];
         this.KEY = N.KEY;
         N.upload = cb=>{
@@ -589,6 +599,38 @@ new class {
             }
 
         },false);
+        let CodeMap = {
+            'Escape':'do-forward',
+            'Tab':'translate-load',
+            'Backspace':'do-reset',
+            'F1':'state-load',
+            'F4':'state-save',
+        };
+        ['keyup', 'keydown'].forEach(val => document.addEventListener(val, (e) => {
+            let code = this.KEY._KeyCode[e.code];
+            if (e.target) {
+                let elm = e.target,
+                    index = this.ELM_ATTR(elm, 'data-key-index');
+                if (index != undefined) {
+                        if (!['Escape', 'Tab', 'F1', 'F4',"Backspace"].includes(e.code)){
+                            elm.value = e.code;
+                            this.stopEvent(e);
+                        }else if(['Escape', 'F1', 'F4',"Backspace"].includes(e.code)) this.stopEvent(e);
+                    return ;
+                }
+            }
+            if(document.querySelector('.gba-keyMap')) return;
+            if(CodeMap[e.code]){
+                this.stopEvent(e);
+                if(e.type == 'keyup') return this.RUNBTN(CodeMap[e.code]);
+            }
+            if (code != undefined) {
+                this.stopEvent(e);
+                this.KEY.sendState(code, e.type == 'keyup' ? 0 : 1);
+            }
+        }, {
+            passive: false
+        }));
         window.addEventListener('beforeunload', e => {
             return this.BTN['db']['UpdateRoom']();
         });
@@ -624,8 +666,8 @@ new class {
     ELM_ATTR(elm, key) {
         if (elm!=undefined &&elm!=null&& elm.nodeType == 1) return elm.getAttribute(key);
     }
-    stopEvent(e) {
-        e.preventDefault();
+    stopEvent(e,bool) {
+        if(!bool)e.preventDefault();
         e.stopPropagation();
         return false;
     }
@@ -653,7 +695,7 @@ new class {
                     }
 
                 }
-                return this.stopEvent(event);
+                return this.stopEvent(event,1);
             } else if (key) {
                 if (event.touches && event.touches.length > 0) {
                     for (var i = 0; i < event.touches.length; i++) {
@@ -680,7 +722,7 @@ new class {
                             }
                         }
                     }
-                    this.stopEvent(event);
+                    this.stopEvent(event,1);
                 } else {
                     if (type == "mouseup") {
                         this.mousedownHold = false;
@@ -688,7 +730,7 @@ new class {
                         this.mousedownHold = true;
                         keyState[this.KEY.get(key)] = 1;
                         this.KEY.SetState(keyState);
-                        return this.stopEvent(event);
+                        return this.stopEvent(event,1);
                     }
                 }
             }
@@ -696,27 +738,6 @@ new class {
             if (noelmclass.includes(elm.className) || ['body', 'html'].includes(elm.tagName.toLowerCase())) return this.stopEvent(event);
         }, {
             'passive': false
-        }));
-
-        ['keyup', 'keydown'].forEach(val => document.addEventListener(val, (e) => {
-            let code = this.KEY._KeyCode[e.code];
-            if (e.target) {
-                let elm = e.target,
-                    index = this.ELM_ATTR(elm, 'data-key-index');
-                if (index != undefined) {
-                    if (e.code == "Backspace") {
-                        elm.value = this.KEY.Keyboard[index];
-                    } else {
-                        if (!['Escape', 'Tab'].includes(e.code)) elm.value = e.code;
-                    }
-                    return;
-                }
-            }
-            if (code != undefined) {
-                this.KEY.sendState(code, e.type == 'keyup' ? 0 : 1);
-            }
-        }, {
-            passive: false
         }));
     }
     gamepad() {

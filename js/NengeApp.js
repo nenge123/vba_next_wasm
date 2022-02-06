@@ -1,5 +1,5 @@
 let NengeApp = new class {
-    version = 7.17;
+    version = 7.20;
     CoreFile = "wasm/vbanext-wasm.7z";
     Core7z = "js/extract7z.min.js";
     CoreZip = "js/jszip.js";
@@ -115,15 +115,6 @@ let NengeApp = new class {
             this.MSG('<button data-btn="startmusic">启动模拟器音乐</button>')
         }
         Module.onRuntimeInitialized = e => {
-            let FS = Module.FS;
-            FS['createFolder']('/', 'etc', !0x0, !0x0),
-                FS['mkdir']('/shader'),
-                FS['syncfs'](!0x0, function (e) {}),
-                FS['createFolder']('/home/web_user', '.config', !0x0, !0x0),
-                FS['createFolder']('/home/web_user/.config', 'retroarch', !0x0, !0x0);
-                for (let dir in cfg) {
-                    if (cfg[dir]) FS['writeFile'](dir, cfg[dir]);
-                }
             console.log('就绪!加载游戏!');
             File['wasmdata'] = null;
             File = null;
@@ -134,6 +125,16 @@ let NengeApp = new class {
         };
         if (typeof EmulatorJS == 'undefined')(new Function('NengeApp', File.wasmjs + ';EmulatorJS(NengeApp.Module);'))(this);
         else EmulatorJS(Module);
+        let FS = Module.FS;
+        FS['createFolder']('/', 'etc', !0x0, !0x0),
+        FS['createFolder']('/etc', 'VBA Next', !0x0, !0x0),
+            FS['mkdir']('/shader'),
+            FS['syncfs'](!0x0, function (e) {}),
+            FS['createFolder']('/home/web_user', '.config', !0x0, !0x0),
+            FS['createFolder']('/home/web_user/.config', 'retroarch', !0x0, !0x0);
+            for (let dir in cfg) {
+                if (cfg[dir]) FS['writeFile'](dir, cfg[dir]);
+            }
         //EmulatorJS(Module);
     }
     AddJs(URL, cb) {
@@ -409,7 +410,6 @@ let NengeApp = new class {
                     p.append("image", new File([image.buffer], 'my.png', {
                         type: "image/png"
                     }));
-                    console.log(imgmd5)
                     g.append("sign", SparkMD5.hash(g.get('appid') + imgmd5 + g.get('salt') + g.get('cuid') + g.get('mac') + g.get('key')));
 
                 }
@@ -430,7 +430,7 @@ let NengeApp = new class {
                     v => {
                         let msg;
                         if (v && v.data) {
-                            msg = v.data.sumDst ? v.data.sumDst.replace(/\n/g, '<br>') : v.error_msg;
+                            msg = v.data.sumDst ? v.data.sumDst.replace(/\n/g, '<br>') : '错误！没找到可翻译内容';
                         }
                         this.MSG('<div class="gba-translate-show">' + msg + '</div>')
                     }
