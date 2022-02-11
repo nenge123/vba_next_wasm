@@ -82,6 +82,7 @@
             writing-mode: vertical-lr;
             align-items: stretch;
             touch-action: none;
+            height: 40vh;
         }
 
         .gba-result {
@@ -496,6 +497,7 @@
 
             .gba-pic {
                 position: relative;
+                height: auto;
             }
 
             body {

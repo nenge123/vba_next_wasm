@@ -619,7 +619,7 @@ new class {
                     return ;
                 }
             }
-            if(document.querySelector('.gba-keyMap')) return;
+            if(document.querySelector('.gba-result').childNodes[0]) return;
             if(CodeMap[e.code]){
                 this.stopEvent(e);
                 if(e.type == 'keyup') return this.RUNBTN(CodeMap[e.code]);
