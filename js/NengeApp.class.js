@@ -215,11 +215,15 @@ new class {
         mode = mode||'rooms';
         let tophtml = mode =='rooms'? '<p><button type="button" data-btn="rooms-upload">添加游戏</button></p><p>vbanext-wasm.7z为运行核心文件,不可删除!如果出现奇异问题可以尝试删除!</p>':'<p><button data-btn="state-clear">清空本游戏状态</button></p><p><button data-btn="state-allclear">清空所有游戏即时状态</button></p>',
             HTML = '';
+            if(this.IMG)for(let imglink in this.IMG)window.URL.revokeObjectURL(imglink);
+            this.IMG = [];
         for(let name in rooms){
             let room = rooms[name],
             dataKey = ` data-keyname="${room.name}"`,
-            title = room.title||room.name;
-            HTML +=  `<div class="gba-roomslist" ${dataKey}><h3>${title}</h3><img src="${room.img? `data:image/jpeg;base64,${window.btoa(String.fromCharCode.apply(null,room.img))}`:`icon/gba2.png`}" title="${room.name}" alt="${name}"><p>${room.time.toLocaleString()}</p><p class="gba-result-roomctr"><button type="button" data-btn="${mode}-load" ${dataKey}>${room.title?'读取':'打开'}</button> | <button type="button" data-btn="${mode}-down" ${dataKey}>下载</button>${room.title?'':` | <button type="button" data-btn="${mode}-delete" ${dataKey}>删除</button>`}</p></div>`;;
+            title = room.title||room.name,
+            imgsrc = room.img&&window.URL.createObjectURL(new Blob([room.img],{type:'image/png'}));
+            if(imgsrc)this.IMG.push(imgsrc);
+            HTML +=  `<div class="gba-roomslist" ${dataKey}><h3>${title}</h3><img src="${imgsrc&&imgsrc||`icon/gba2.png`}" title="${room.name}" alt="${name}"><p>${room.time.toLocaleString()}</p><p class="gba-result-roomctr"><button type="button" data-btn="${mode}-load" ${dataKey}>${room.title?'读取':'打开'}</button> | <button type="button" data-btn="${mode}-down" ${dataKey}>下载</button>${room.title?'':` | <button type="button" data-btn="${mode}-delete" ${dataKey}>删除</button>`}</p></div>`;;
         }
         return `${tophtml}<div class="gba-rooms">${HTML}</div>${tophtml}`+this.ABOUT;
     }
@@ -235,7 +239,7 @@ new class {
         return HTML;
     }
     GAMEPAD_HTML(KeyGamePad, KeyGamePadMap, KeyMap) {
-        let HTML = '<div class="gba-flex" style="align-items: flex-start;"><div class="gba-list-pad"><h3>手柄参数,基于我的廉价PS4手柄（百元不到）</h3>' +
+        let HTML = '<div class="gba-flex" style="align-items: flex-start;"><div class="gba-list-pad"><h3>手柄参数,基于我的廉价PS4手柄（百元不到）链接手柄，打开本设置，可以通过按动手柄重新映射。</h3>' +
             '<table border="1" class="gba-table"><tr><th>键位</th><th>键值</th></tr>';
         for (let i in KeyGamePadMap) {
             if (i == 'length') continue;
@@ -243,7 +247,7 @@ new class {
             HTML += `<tr><td>${KeyGamePadMap[i]}</td><td><input type="text" value="${KeyGamePad[i]}" data-gamepad-index="${i}" tabindex="${num}" required></td></tr>`;
         }
         let keylength = 0;
-        return HTML + `</table></div><div class="gba-list-pad">${Array.from(KeyMap,x=>x.toLowerCase()+'=>'+(keylength++)).join('<br>')}</div></div>`;
+        return HTML + `</table></div><div class="gba-list-pad"><h3>特殊值：'加速','切换',"即读","即存","重启","快照"</h3>${Array.from(KeyMap,x=>x.toLowerCase()+'=>'+(keylength++)).join('<br>')}</div></div>`;
     }
     NOTGBA_HTML(name){
         return `<p class="gba-notgba">${name}<b>不是GBA文件</b></p>`;
