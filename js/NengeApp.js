@@ -55,7 +55,7 @@ let NengeApp = new class {
                  * 常驻可以在离开的时候储存
                  * 临时的可以避免多次操作产生错误。
                  * 为此用承诺方式执行
-                 * 
+                 *
                     let worker = new Worker(this.file);
                     worker.onerror = e => this.Erro(e);
                     worker.onmessage = e=>{
@@ -163,8 +163,8 @@ let NengeApp = new class {
             'settings': e => {
                 this.RESULT(this.ELM.MENU_HTML)
             },
-            'reload': e => {                
-                return location.reload();                
+            'reload': e => {
+                return location.reload();
             },
             'reset': e => {
                 if (!this.isRun) return;
@@ -470,6 +470,66 @@ let NengeApp = new class {
                     }
                 }
                 console.log(code.join('\\n'));
+
+                //适用口袋妖怪穿墙
+                if (code.toString() == "C518E2595ADBAF5B") {
+                    let id = setInterval(function () {
+                        NengeApp.Module['setValue'](40759308, 0);
+                        NengeApp.Module['setValue'](40759309, 33);
+                    }, 10);
+                }
+                //适用所有GBA游戏的原始作弊码
+                for (let i = 0; i < code.length; i++) {
+                    code[i] = code[i].replace(":","");
+                    code[i] = code[i].replace("：","");
+                    let address = code[i].substring(0, 8);
+                    let value = code[i].substring(8, code[i].length);
+                    let highValue = address.substring(0,2);
+                    //02变量数据 , 08程序数据
+                    let offset = 40201760;
+                    if (highValue == "02") {
+                        offset = 40201760;
+                    } else if (highValue == "08") {
+                        offset = -40759308;
+                    } else {
+                        continue;
+                    }
+
+                    let rd = eval("0x" + address).toString(10);
+                    rd = parseInt(rd) + parseInt(offset);
+                    if (value.length == 2) {
+                        let id = setInterval(function () {
+                            NengeApp.Module['setValue'](rd, eval("0x" + value.substring(0, 2)).toString(10));
+                        }, 10);
+                    }
+                    if (value.length == 4) {
+                        let id = setInterval(function () {
+                            NengeApp.Module['setValue'](rd, eval("0x" + value.substring(2, 4)).toString(10));
+                            NengeApp.Module['setValue'](rd + 1, eval("0x" + value.substring(0, 2)).toString(10));
+                        }, 10);
+                    }
+                    if (value.length == 8) {
+                        let id = setInterval(function () {
+                            NengeApp.Module['setValue'](rd, eval("0x" + value.substring(6, 8)).toString(10));
+                            NengeApp.Module['setValue'](rd + 1, eval("0x" + value.substring(4, 6)).toString(10));
+                            NengeApp.Module['setValue'](rd + 2, eval("0x" + value.substring(2, 4)).toString(10));
+                            NengeApp.Module['setValue'](rd + 3,  eval("0x" + value.substring(0, 2)).toString(10));
+                        }, 10);
+                    }
+                    if (value.length == 16) {
+                        let id = setInterval(function () {
+                            NengeApp.Module['setValue'](rd, eval("0x" + value.substring(14, 16)).toString(10));
+                            NengeApp.Module['setValue'](rd + 1, eval("0x" + value.substring(12, 14)).toString(10));
+                            NengeApp.Module['setValue'](rd + 2, eval("0x" + value.substring(10, 12)).toString(10));
+                            NengeApp.Module['setValue'](rd + 3, eval("0x" + value.substring(8, 10)).toString(10));
+                            NengeApp.Module['setValue'](rd + 4, eval("0x" + value.substring(6, 8)).toString(10));
+                            NengeApp.Module['setValue'](rd + 5, eval("0x" + value.substring(4, 6)).toString(10));
+                            NengeApp.Module['setValue'](rd + 6, eval("0x" + value.substring(2, 4)).toString(10));
+                            NengeApp.Module['setValue'](rd + 7, eval("0x" + value.substring(0, 2)).toString(10));
+                        }, 10);
+                    }
+                }
+
                 this.Module._reset_cheat();
                 this.Module['cwrap']('set_cheat', 'number', ['number', 'number', 'string'])(0, 1, code.join('\\n'));
             },
