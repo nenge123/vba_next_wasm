@@ -4,7 +4,7 @@ var EmulatorJS = (function () {
     return (
       function (EmulatorJS) {
         EmulatorJS = EmulatorJS || {};
-  
+
         var Module = typeof EmulatorJS !== "undefined" ? EmulatorJS : {};
         var moduleOverrides = {},tempDouble,tempI64,setImmediate;
         var key;
@@ -31,7 +31,7 @@ var EmulatorJS = (function () {
         ENVIRONMENT_IS_NODE = ENVIRONMENT_HAS_NODE && !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_WORKER;
         ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
         var scriptDirectory = "";
-  
+
         function locateFile(path) {
           if (Module["locateFile"]) {
             return Module["locateFile"](path, scriptDirectory)
@@ -156,7 +156,7 @@ var EmulatorJS = (function () {
         }
         moduleOverrides = undefined;
         var STACK_ALIGN = 16;
-  
+
         function dynamicAlloc(size) {
           var ret = HEAP32[DYNAMICTOP_PTR >> 2];
           var end = ret + size + 15 & -16;
@@ -166,7 +166,7 @@ var EmulatorJS = (function () {
           HEAP32[DYNAMICTOP_PTR >> 2] = end;
           return ret
         }
-  
+
         function getNativeTypeSize(type) {
           switch (type) {
             case "i1":
@@ -195,7 +195,7 @@ var EmulatorJS = (function () {
             }
           }
         }
-  
+
         function warnOnce(text) {
           if (!warnOnce.shown) warnOnce.shown = {};
           if (!warnOnce.shown[text]) {
@@ -213,7 +213,7 @@ var EmulatorJS = (function () {
         };
         var jsCallStartIndex = 1;
         var functionPointers = new Array(0);
-  
+
         function convertJsFunctionToWasm(func, sig) {
           var typeSection = [1, 0, 1, 96];
           var sigRet = sig.slice(0, 1);
@@ -245,7 +245,7 @@ var EmulatorJS = (function () {
           return wrappedFunc
         }
         var funcWrappers = {};
-  
+
         function dynCall(sig, ptr, args) {
           if (args && args.length) {
             return Module["dynCall_" + sig].apply(null, [ptr].concat(args))
@@ -264,7 +264,7 @@ var EmulatorJS = (function () {
         if (typeof WebAssembly !== "object") {
           err("no native wasm support detected")
         }
-  
+
         function setValue(ptr, value, type, noSafe) {
           type = type || "i8";
           if (type.charAt(type.length - 1) === "*") type = "i32";
@@ -294,7 +294,7 @@ var EmulatorJS = (function () {
               abort("invalid type for setValue: " + type)
           }
         }
-  
+
         function getValue(ptr, type, noSafe) {
           type = type || "i8";
           if (type.charAt(type.length - 1) === "*") type = "i32";
@@ -322,19 +322,19 @@ var EmulatorJS = (function () {
         var wasmTable;
         var ABORT = false;
         var EXITSTATUS = 0;
-  
+
         function assert(condition, text) {
           if (!condition) {
             abort("Assertion failed: " + text)
           }
         }
-  
+
         function getCFunc(ident) {
           var func = Module["_" + ident];
           assert(func, "Cannot call unknown function " + ident + ", make sure it is exported");
           return func
         }
-  
+
         function ccall(ident, returnType, argTypes, args, opts) {
           var toC = {
             "string": function (str) {
@@ -352,7 +352,7 @@ var EmulatorJS = (function () {
               return ret
             }
           };
-  
+
           function convertReturnValue(ret) {
             if (returnType === "string") return UTF8ToString(ret);
             if (returnType === "boolean") return Boolean(ret);
@@ -377,7 +377,7 @@ var EmulatorJS = (function () {
           if (stack !== 0) stackRestore(stack);
           return ret
         }
-  
+
         function cwrap(ident, returnType, argTypes, opts) {
           argTypes = argTypes || [];
           var numericArgs = argTypes.every(function (type) {
@@ -393,7 +393,7 @@ var EmulatorJS = (function () {
         }
         var ALLOC_NORMAL = 0;
         var ALLOC_NONE = 3;
-  
+
         function allocate(slab, types, allocator, ptr) {
           var zeroinit, size;
           if (typeof slab === "number") {
@@ -451,13 +451,13 @@ var EmulatorJS = (function () {
           }
           return ret
         }
-  
+
         function getMemory(size) {
           if (!runtimeInitialized) return dynamicAlloc(size);
           return _malloc(size)
         }
         var UTF8Decoder = typeof TextDecoder !== "undefined" ? new TextDecoder("utf8") : undefined;
-  
+
         function UTF8ArrayToString(u8Array, idx, maxBytesToRead) {
           var endIdx = idx + maxBytesToRead;
           var endPtr = idx;
@@ -493,11 +493,11 @@ var EmulatorJS = (function () {
           }
           return str
         }
-  
+
         function UTF8ToString(ptr, maxBytesToRead) {
           return ptr ? UTF8ArrayToString(HEAPU8, ptr, maxBytesToRead) : ""
         }
-  
+
         function stringToUTF8Array(str, outU8Array, outIdx, maxBytesToWrite) {
           if (!(maxBytesToWrite > 0)) return 0;
           var startIdx = outIdx;
@@ -531,11 +531,11 @@ var EmulatorJS = (function () {
           outU8Array[outIdx] = 0;
           return outIdx - startIdx
         }
-  
+
         function stringToUTF8(str, outPtr, maxBytesToWrite) {
           return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite)
         }
-  
+
         function lengthBytesUTF8(str) {
           var len = 0;
           for (var i = 0; i < str.length; ++i) {
@@ -549,36 +549,36 @@ var EmulatorJS = (function () {
           return len
         }
         var UTF16Decoder = typeof TextDecoder !== "undefined" ? new TextDecoder("utf-16le") : undefined;
-  
+
         function allocateUTF8(str) {
           var size = lengthBytesUTF8(str) + 1;
           var ret = _malloc(size);
           if (ret) stringToUTF8Array(str, HEAP8, ret, size);
           return ret
         }
-  
+
         function allocateUTF8OnStack(str) {
           var size = lengthBytesUTF8(str) + 1;
           var ret = stackAlloc(size);
           stringToUTF8Array(str, HEAP8, ret, size);
           return ret
         }
-  
+
         function writeArrayToMemory(array, buffer) {
           HEAP8.set(array, buffer)
         }
-  
+
         function writeAsciiToMemory(str, buffer, dontAddNull) {
           for (var i = 0; i < str.length; ++i) {
             HEAP8[buffer++ >> 0] = str.charCodeAt(i)
           }
           if (!dontAddNull) HEAP8[buffer >> 0] = 0
         }
-  
+
         function demangle(func) {
           return func
         }
-  
+
         function demangleAll(text) {
           var regex = /__Z[\w\d_]+/g;
           return text.replace(regex, function (x) {
@@ -586,7 +586,7 @@ var EmulatorJS = (function () {
             return x === y ? x : y + " [" + x + "]"
           })
         }
-  
+
         function jsStackTrace() {
           var err = new Error;
           if (!err.stack) {
@@ -601,7 +601,7 @@ var EmulatorJS = (function () {
           }
           return err.stack.toString()
         }
-  
+
         function stackTrace() {
           var js = jsStackTrace();
           if (Module["extraStackTrace"]) js += "\n" + Module["extraStackTrace"]();
@@ -609,7 +609,7 @@ var EmulatorJS = (function () {
         }
         var PAGE_SIZE = 16384;
         var WASM_PAGE_SIZE = 65536;
-  
+
         function alignUp(x, multiple) {
           if (x % multiple > 0) {
             x += multiple - x % multiple
@@ -617,7 +617,7 @@ var EmulatorJS = (function () {
           return x
         }
         var buffer, HEAP8, HEAPU8, HEAP16, HEAPU16, HEAP32, HEAPU32, HEAPF32, HEAPF64;
-  
+
         function updateGlobalBufferViews() {
           Module["HEAP8"] = HEAP8 = new Int8Array(buffer);
           Module["HEAP16"] = HEAP16 = new Int16Array(buffer);
@@ -648,7 +648,7 @@ var EmulatorJS = (function () {
         }
         updateGlobalBufferViews();
         HEAP32[DYNAMICTOP_PTR >> 2] = DYNAMIC_BASE;
-  
+
         function callRuntimeCallbacks(callbacks) {
           while (callbacks.length > 0) {
             var callback = callbacks.shift();
@@ -675,7 +675,7 @@ var EmulatorJS = (function () {
         var __ATPOSTRUN__ = [];
         var runtimeInitialized = false;
         var runtimeExited = false;
-  
+
         function preRun() {
           if (Module["preRun"]) {
             if (typeof Module["preRun"] == "function") Module["preRun"] = [Module["preRun"]];
@@ -685,7 +685,7 @@ var EmulatorJS = (function () {
           }
           callRuntimeCallbacks(__ATPRERUN__)
         }
-  
+
         function ensureInitRuntime() {
           if (runtimeInitialized) return;
           runtimeInitialized = true;
@@ -693,19 +693,19 @@ var EmulatorJS = (function () {
           TTY.init();
           callRuntimeCallbacks(__ATINIT__)
         }
-  
+
         function preMain() {
           FS.ignorePermissions = false;
           callRuntimeCallbacks(__ATMAIN__)
         }
-  
+
         function exitRuntime() {
           callRuntimeCallbacks(__ATEXIT__);
           FS.quit();
           TTY.shutdown();
           runtimeExited = true
         }
-  
+
         function postRun() {
           if (Module["postRun"]) {
             if (typeof Module["postRun"] == "function") Module["postRun"] = [Module["postRun"]];
@@ -715,11 +715,11 @@ var EmulatorJS = (function () {
           }
           callRuntimeCallbacks(__ATPOSTRUN__)
         }
-  
+
         function addOnPreRun(cb) {
           __ATPRERUN__.unshift(cb)
         }
-  
+
         function addOnPostRun(cb) {
           __ATPOSTRUN__.unshift(cb)
         }
@@ -730,18 +730,18 @@ var EmulatorJS = (function () {
         var runDependencies = 0;
         var runDependencyWatcher = null;
         var dependenciesFulfilled = null;
-  
+
         function getUniqueRunDependency(id) {
           return id
         }
-  
+
         function addRunDependency(id) {
           runDependencies++;
           if (Module["monitorRunDependencies"]) {
             Module["monitorRunDependencies"](runDependencies)
           }
         }
-  
+
         function removeRunDependency(id) {
           runDependencies--;
           if (Module["monitorRunDependencies"]) {
@@ -762,7 +762,7 @@ var EmulatorJS = (function () {
         Module["preloadedImages"] = {};
         Module["preloadedAudios"] = {};
         var dataURIPrefix = "data:application/octet-stream;base64,";
-  
+
         function isDataURI(filename) {
           return String.prototype.startsWith ? filename.startsWith(dataURIPrefix) : filename.indexOf(dataURIPrefix) === 0
         }
@@ -770,7 +770,7 @@ var EmulatorJS = (function () {
         if (!isDataURI(wasmBinaryFile)) {
           wasmBinaryFile = locateFile(wasmBinaryFile)
         }
-  
+
         function getBinary() {
           try {
             if (Module["wasmBinary"]) {
@@ -785,7 +785,7 @@ var EmulatorJS = (function () {
             abort(err)
           }
         }
-  
+
         function getBinaryPromise() {
           if (!Module["wasmBinary"] && (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) && typeof fetch === "function") {
             return fetch(wasmBinaryFile, {
@@ -803,7 +803,7 @@ var EmulatorJS = (function () {
             resolve(getBinary())
           })
         }
-  
+
         function createWasm(env) {
           var info = {
             "env": env,
@@ -814,18 +814,18 @@ var EmulatorJS = (function () {
             "global.Math": Math,
             "asm2wasm": asm2wasmImports
           };
-  
+
           function receiveInstance(instance, module) {
             var exports = instance.exports;
             Module["asm"] = exports;
             removeRunDependency("wasm-instantiate")
           }
           addRunDependency("wasm-instantiate");
-  
+
           function receiveInstantiatedSource(output) {
             receiveInstance(output["instance"])
           }
-  
+
           function instantiateArrayBuffer(receiver) {
             return getBinaryPromise().then(function (binary) {
               return WebAssembly.instantiate(binary, info)
@@ -834,7 +834,7 @@ var EmulatorJS = (function () {
               abort(reason)
             })
           }
-  
+
           function instantiateAsync() {
             if (!Module["wasmBinary"] && typeof WebAssembly.instantiateStreaming === "function" && !isDataURI(wasmBinaryFile) && typeof fetch === "function") {
               fetch(wasmBinaryFile, {
@@ -910,7 +910,7 @@ var EmulatorJS = (function () {
             window._RUMBLE_DATA = []
           }
         }];
-  
+
         function _emscripten_asm_const_iiii(code, a0, a1, a2) {
           return ASM_CONSTS[code](a0, a1, a2)
         }
@@ -920,7 +920,7 @@ var EmulatorJS = (function () {
           }
         });
         var tempDoublePtr = 1122128;
-  
+
         function _emscripten_set_main_loop_timing(mode, value) {
           Browser.mainLoop.timingMode = mode;
           Browser.mainLoop.timingValue = value;
@@ -968,11 +968,11 @@ var EmulatorJS = (function () {
           }
           return 0
         }
-  
+
         function _emscripten_get_now() {
           abort()
         }
-  
+
         function _emscripten_set_main_loop(func, fps, simulateInfiniteLoop, arg, noSetTiming) {
           Module["noExitRuntime"] = true;
           assert(!Browser.mainLoop.func, "'emscripten_set_main_loop' 一次只能有一个主循环功能,\n调用:'emscripten_cancel_main_loop'取消前一个,然后再设置一个不同参数的新主循环.");
@@ -1180,14 +1180,14 @@ var EmulatorJS = (function () {
             };
             audioPlugin["handle"] = function audioPlugin_handle(byteArray, name, onload, onerror) {
               var done = false;
-  
+
               function finish(audio) {
                 if (done) return;
                 done = true;
                 Module["preloadedAudios"][name] = audio;
                 if (onload) onload(byteArray)
               }
-  
+
               function fail() {
                 if (done) return;
                 done = true;
@@ -1210,7 +1210,7 @@ var EmulatorJS = (function () {
                 audio.onerror = function audio_onerror(event) {
                   if (done) return;
                   console.log("warning: browser could not fully decode audio " + name + ", trying slower base64 approach");
-  
+
                   function encode64(data) {
                     var BASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
                     var PAD = "=";
@@ -1247,7 +1247,7 @@ var EmulatorJS = (function () {
               }
             };
             Module["preloadPlugins"].push(audioPlugin);
-  
+
             function pointerLockChange() {
               console.log("屏幕锁定");
               Browser.pointerLock = document["pointerLockElement"] === Module["canvas"] || document["mozPointerLockElement"] === Module["canvas"] || document["webkitPointerLockElement"] === Module["canvas"] || document["msPointerLockElement"] === Module["canvas"]
@@ -1321,7 +1321,7 @@ var EmulatorJS = (function () {
             if (typeof Browser.resizeCanvas === "undefined") Browser.resizeCanvas = false;
             if (typeof Browser.vrDevice === "undefined") Browser.vrDevice = null;
             var canvas = Module["canvas"];
-  
+
             function fullscreenChange() {
               return ;
               Browser.isFullscreen = false;
@@ -1673,7 +1673,7 @@ var EmulatorJS = (function () {
             return handle
           }
         };
-  
+
         function _usleep(useconds) {
           var msec = useconds / 1e3;
           if ((ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) && self["performance"] && self["performance"]["now"]) {
@@ -1751,24 +1751,24 @@ var EmulatorJS = (function () {
             } while (RA.bufIndex === RA.numBuffers)
           }
         };
-  
+
         function _RWebAudioBufferSize() {
           return RA.numBuffers * RA.BUFFER_SIZE * 8
         }
-  
+
         function _RWebAudioFree() {
           RA.bufIndex = 0;
           RA.bufOffset = 0
         }
-  
+
         function _RWebAudioInit(latency) {
           if (!Module.runMusic) return 0;
           Module["pauseMainLoop"]();
           console.log("初始化音乐!");
           var ac = window["AudioContext"] || window["webkitAudioContext"];
           if (!ac) return 0;
-          RA.context = new ac;
-          RA.numBuffers = latency * RA.context.sampleRate / (1e3 * RA.BUFFER_SIZE) | 0;
+          RA.context = new ac;//latency 默认值是96,改成固定值400 ,调整后能够显著改善音质爆音问题
+          RA.numBuffers = 400 * RA.context.sampleRate / (1e3 * RA.BUFFER_SIZE) | 0;
           if (RA.numBuffers < 2) RA.numBuffers = 2;
           for (var i = 0; i < RA.numBuffers; i++) {
             RA.buffers[i] = RA.context.createBuffer(2, RA.BUFFER_SIZE, RA.context.sampleRate);
@@ -1785,32 +1785,32 @@ var EmulatorJS = (function () {
           Module.MusicMSG();
           return 1
         }
-  
+
         function _RWebAudioRecalibrateTime() {
           if (RA.startTime) {
             RA.startTime = window["performance"]["now"]() - RA.context.currentTime * 1e3
           }
         }
-  
+
         function _RWebAudioSampleRate() {
           if (!RA.context) return 4800;
           return RA.context.sampleRate
         }
-  
+
         function _RWebAudioSetNonblockState(state) {
           RA.nonblock = state
         }
-  
+
         function _RWebAudioStart() {
           return true
         }
-  
+
         function _RWebAudioStop() {
           RA.bufIndex = 0;
           RA.bufOffset = 0;
           return true
         }
-  
+
         function _RWebAudioWrite(buf, size) {
           if (!RA.context) return 0;
           RA.process();
@@ -1831,7 +1831,7 @@ var EmulatorJS = (function () {
           }
           return count * 8
         }
-  
+
         function _RWebAudioWriteAvail() {
           if (!RA.context) return 0;
           RA.process();
@@ -1847,14 +1847,14 @@ var EmulatorJS = (function () {
             return RWC.contexts[data].runMode == 2 && !RWC.contexts[data].videoElement.paused && RWC.contexts[data].videoElement.videoWidth != 0 && RWC.contexts[data].videoElement.videoHeight != 0
           }
         };
-  
+
         function _RWebCamFree(data) {
           RWC.contexts[data].videoElement.pause();
           URL.revokeObjectURL(RWC.contexts[data].videoElement.src);
           RWC.contexts[data].videoElement = null;
           RWC.contexts[data] = null
         }
-  
+
         function _RWebCamInit(caps1, caps2, width, height) {
           if (!navigator) return 0;
           navigator.getMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
@@ -2050,11 +2050,11 @@ var EmulatorJS = (function () {
             }
           }
         };
-  
+
         function _glBindTexture(target, texture) {
           GLctx.bindTexture(target, GL.textures[texture])
         }
-  
+
         function emscriptenWebGLGet(name_, p, type) {
           if (!p) {
             GL.recordError(1281);
@@ -2158,11 +2158,11 @@ var EmulatorJS = (function () {
               throw "internal glGet error, bad type: " + type
           }
         }
-  
+
         function _glGetIntegerv(name_, p) {
           emscriptenWebGLGet(name_, p, "Integer")
         }
-  
+
         function _RWebCamPoll(data, frame_raw_cb, frame_gl_cb) {
           if (!RWC.ready(data)) return 0;
           var ret = 0;
@@ -2195,7 +2195,7 @@ var EmulatorJS = (function () {
           }
           return ret
         }
-  
+
         function __glGenObject(n, buffers, createFunction, objectTable) {
           for (var i = 0; i < n; i++) {
             var buffer = GLctx[createFunction]();
@@ -2209,15 +2209,15 @@ var EmulatorJS = (function () {
             HEAP32[buffers + i * 4 >> 2] = id
           }
         }
-  
+
         function _glGenTextures(n, textures) {
           __glGenObject(n, textures, "createTexture", GL.textures)
         }
-  
+
         function _glTexParameteri(x0, x1, x2) {
           GLctx["texParameteri"](x0, x1, x2)
         }
-  
+
         function _RWebCamStart(data) {
           var ret = 0;
           if (RWC.contexts[data].glTex) {
@@ -2242,7 +2242,7 @@ var EmulatorJS = (function () {
           }
           return ret
         }
-  
+
         function _glDeleteTextures(n, textures) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[textures + i * 4 >> 2];
@@ -2253,7 +2253,7 @@ var EmulatorJS = (function () {
             GL.textures[id] = null
           }
         }
-  
+
         function _RWebCamStop(data) {
           if (RWC.contexts[data].glTexId) {
             _glDeleteTextures(1, RWC.contexts[data].glTexId)
@@ -2267,12 +2267,12 @@ var EmulatorJS = (function () {
             RWC.contexts[data].rawFbCanvas = null
           }
         }
-  
+
         function ___assert_fail(condition, filename, line, func) {
           abort("Assertion failed: " + UTF8ToString(condition) + ", at: " + [filename ? UTF8ToString(filename) : "unknown filename", line, func ? UTF8ToString(func) : "unknown function"])
         }
         var ENV = {};
-  
+
         function ___buildEnvironment(environ) {
           var MAX_ENV_VALUES = 64;
           var TOTAL_ENV_SIZE = 1024;
@@ -2315,24 +2315,24 @@ var EmulatorJS = (function () {
           }
           HEAP32[envPtr + strings.length * ptrSize >> 2] = 0
         }
-  
+
         function _atexit(func, arg) {
           __ATEXIT__.unshift({
             func: func,
             arg: arg
           })
         }
-  
+
         function ___cxa_atexit() {
           return _atexit.apply(null, arguments)
         }
-  
+
         function ___cxa_uncaught_exception() {
           return !!__ZSt18uncaught_exceptionv.uncaught_exception
         }
-  
+
         function ___gxx_personality_v0() {}
-  
+
         function ___lock() {}
         var PATH = {
           splitPath: function (filename) {
@@ -2403,7 +2403,7 @@ var EmulatorJS = (function () {
             return PATH.normalize(l + "/" + r)
           }
         };
-  
+
         function ___setErrNo(value) {
           if (Module["___errno_location"]) HEAP32[Module["___errno_location"]() >> 2] = value;
           return value
@@ -2430,7 +2430,7 @@ var EmulatorJS = (function () {
           relative: function (from, to) {
             from = PATH_FS.resolve(from).substr(1);
             to = PATH_FS.resolve(to).substr(1);
-  
+
             function trim(arr) {
               var start = 0;
               for (; start < arr.length; start++) {
@@ -2996,11 +2996,11 @@ var EmulatorJS = (function () {
           },
           getLocalSet: function (mount, callback) {
             var entries = {};
-  
+
             function isRealDir(p) {
               return p !== "." && p !== ".."
             }
-  
+
             function toAbsolute(root) {
               return function (p) {
                 return PATH.join2(root, p)
@@ -3173,7 +3173,7 @@ var EmulatorJS = (function () {
             var db = src.type === "remote" ? src.db : dst.db;
             var transaction = db.transaction([IDBFS.DB_STORE_NAME], "readwrite");
             var store = transaction.objectStore(IDBFS.DB_STORE_NAME);
-  
+
             function done(err) {
               if (err) {
                 if (!done.errored) {
@@ -3486,7 +3486,7 @@ var EmulatorJS = (function () {
             if (!WORKERFS.reader) WORKERFS.reader = new FileReaderSync;
             var root = WORKERFS.createNode(null, "/", WORKERFS.DIR_MODE, 0);
             var createdParents = {};
-  
+
             function ensureParent(path) {
               var parts = path.split("/");
               var parent = root;
@@ -3499,7 +3499,7 @@ var EmulatorJS = (function () {
               }
               return parent
             }
-  
+
             function base(path) {
               var parts = path.split("/");
               return parts[parts.length - 1]
@@ -4040,12 +4040,12 @@ var EmulatorJS = (function () {
             }
             var mounts = FS.getMounts(FS.root.mount);
             var completed = 0;
-  
+
             function doCallback(err) {
               FS.syncFSRequests--;
               return callback(err)
             }
-  
+
             function done(err) {
               if (err) {
                 if (!done.errored) {
@@ -5245,7 +5245,7 @@ var EmulatorJS = (function () {
             Browser.init();
             var fullname = name ? PATH_FS.resolve(PATH.join2(parent, name)) : parent;
             var dep = getUniqueRunDependency("cp " + fullname);
-  
+
             function processData(byteArray) {
               function finish(byteArray) {
                 if (preFinish) preFinish();
@@ -5306,7 +5306,7 @@ var EmulatorJS = (function () {
               var ok = 0,
                 fail = 0,
                 total = paths.length;
-  
+
               function finish() {
                 if (fail == 0) onload();
                 else onerror()
@@ -5348,7 +5348,7 @@ var EmulatorJS = (function () {
               var ok = 0,
                 fail = 0,
                 total = paths.length;
-  
+
               function finish() {
                 if (fail == 0) onload();
                 else onerror()
@@ -5524,7 +5524,7 @@ var EmulatorJS = (function () {
             SYSCALLS.get()
           }
         };
-  
+
         function ___syscall10(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5536,7 +5536,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall140(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5560,7 +5560,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall145(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5573,7 +5573,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall146(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5586,7 +5586,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall194(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5600,7 +5600,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall195(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5612,7 +5612,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall197(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5630,7 +5630,7 @@ var EmulatorJS = (function () {
           sid: 42,
           pgid: 42
         };
-  
+
         function ___syscall20(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5640,7 +5640,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall220(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5681,7 +5681,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall221(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5731,7 +5731,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall3(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5744,7 +5744,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall38(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5757,7 +5757,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall39(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5769,7 +5769,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall4(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5782,7 +5782,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall40(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5794,7 +5794,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall5(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5808,7 +5808,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall54(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5859,7 +5859,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall6(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5871,7 +5871,7 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___syscall85(which, varargs) {
           SYSCALLS.varargs = varargs;
           try {
@@ -5884,17 +5884,17 @@ var EmulatorJS = (function () {
             return -e.errno
           }
         }
-  
+
         function ___unlock() {}
-  
+
         function _abort() {
           Module["abort"]()
         }
-  
+
         function _emscripten_get_now_is_monotonic() {
           return 0 || ENVIRONMENT_IS_NODE || typeof dateNow !== "undefined" || typeof performance === "object" && performance && typeof performance["now"] === "function"
         }
-  
+
         function _clock_gettime(clk_id, tp) {
           var now;
           if (clk_id === 0) {
@@ -5971,7 +5971,7 @@ var EmulatorJS = (function () {
             return 1
           }
         };
-  
+
         function _eglBindAPI(api) {
           if (api == 12448) {
             EGL.setErrorCode(12288);
@@ -5981,11 +5981,11 @@ var EmulatorJS = (function () {
             return 0
           }
         }
-  
+
         function _eglChooseConfig(display, attrib_list, configs, config_size, numConfigs) {
           return EGL.chooseConfig(display, attrib_list, configs, config_size, numConfigs)
         }
-  
+
         function _eglCreateContext(display, config, hmm, contextAttribs) {
           console.log('初始化屏幕EGL函数');
           if (display != 62e3) {
@@ -6026,7 +6026,7 @@ var EmulatorJS = (function () {
             return 0
           }
         }
-  
+
         function _eglCreateWindowSurface(display, config, win, attrib_list) {
           if (display != 62e3) {
             EGL.setErrorCode(12296);
@@ -6039,7 +6039,7 @@ var EmulatorJS = (function () {
           EGL.setErrorCode(12288);
           return 62006
         }
-  
+
         function _eglDestroyContext(display, context) {
           if (display != 62e3) {
             EGL.setErrorCode(12296);
@@ -6052,7 +6052,7 @@ var EmulatorJS = (function () {
           EGL.setErrorCode(12288);
           return 1
         }
-  
+
         function _eglDestroySurface(display, surface) {
           if (display != 62e3) {
             EGL.setErrorCode(12296);
@@ -6071,28 +6071,28 @@ var EmulatorJS = (function () {
           EGL.setErrorCode(12288);
           return 1
         }
-  
+
         function _eglGetConfigs(display, configs, config_size, numConfigs) {
           return EGL.chooseConfig(display, 0, configs, config_size, numConfigs)
         }
-  
+
         function _eglGetCurrentContext() {
           return EGL.currentContext
         }
-  
+
         function _eglGetDisplay(nativeDisplayType) {
           EGL.setErrorCode(12288);
           return 62e3
         }
-  
+
         function _eglGetError() {
           return EGL.errorCode
         }
-  
+
         function _eglGetProcAddress(name_) {
           return _emscripten_GetProcAddress(name_)
         }
-  
+
         function _eglInitialize(display, majorVersion, minorVersion) {
           if (display == 62e3) {
             if (majorVersion) {
@@ -6109,7 +6109,7 @@ var EmulatorJS = (function () {
             return 0
           }
         }
-  
+
         function _eglMakeCurrent(display, draw, read, context) {
           if (display != 62e3) {
             EGL.setErrorCode(12296);
@@ -6130,7 +6130,7 @@ var EmulatorJS = (function () {
           EGL.setErrorCode(12288);
           return 1
         }
-  
+
         function _eglQuerySurface(display, surface, attribute, value) {
           if (display != 62e3) {
             EGL.setErrorCode(12296);
@@ -6185,7 +6185,7 @@ var EmulatorJS = (function () {
               return 0
           }
         }
-  
+
         function _eglSwapBuffers() {
           if (!EGL.defaultDisplayInitialized) {
             EGL.setErrorCode(12289)
@@ -6199,7 +6199,7 @@ var EmulatorJS = (function () {
           }
           return 0
         }
-  
+
         function _eglTerminate(display) {
           if (display != 62e3) {
             EGL.setErrorCode(12296);
@@ -6358,7 +6358,7 @@ var EmulatorJS = (function () {
             return document.fullscreenEnabled || document.mozFullScreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled
           }
         };
-  
+
         function __requestPointerLock(target) {
           if (target.requestPointerLock) {
             target.requestPointerLock()
@@ -6377,7 +6377,7 @@ var EmulatorJS = (function () {
           }
           return 0
         }
-  
+
         function _emscripten_exit_pointerlock() {
           JSEvents.removeDeferredCalls(__requestPointerLock);
           if (document.exitPointerLock) {
@@ -6393,13 +6393,13 @@ var EmulatorJS = (function () {
           }
           return 0
         }
-  
+
         function _emscripten_force_exit(status) {
           Module["noExitRuntime"] = false;
           exit(status)
         }
         var __specialEventTargets = [0, typeof document !== "undefined" ? document : 0, typeof window !== "undefined" ? window : 0];
-  
+
         function __findEventTarget(target) {
             if (!target) return window;
             if (typeof target === "number") target = __specialEventTargets[target] || UTF8ToString(target);
@@ -6409,7 +6409,7 @@ var EmulatorJS = (function () {
             else if (target === "#canvas") return Module["canvas"];
             return typeof target === "string" ? document.getElementById(target) : target;
         }
-  
+
         function __findCanvasEventTarget(target) {
           if (typeof target === "number") target = UTF8ToString(target);
           if (!target || target === "#canvas") {
@@ -6419,13 +6419,13 @@ var EmulatorJS = (function () {
           if (typeof GL !== "undefined" && GL.offscreenCanvases[target]) return GL.offscreenCanvases[target];
           return __findEventTarget(target)
         }
-        
+
         function _emscripten_get_canvas_element_size(target, width, height) {
           if (!Module.canvas) return -4;
             Module.HEAP32[width >> 2] = Module.CanvasWidth;
             Module.HEAP32[height >> 2] = Module.CanvasHidth;
         }
-  
+
         function __fillGamepadEventData(eventStruct, e) {
           HEAPF64[eventStruct >> 3] = e.timestamp;
           for (var i = 0; i < e.axes.length; ++i) {
@@ -6452,130 +6452,130 @@ var EmulatorJS = (function () {
           stringToUTF8(e.id, eventStruct + 1304, 64);
           stringToUTF8(e.mapping, eventStruct + 1368, 64)
         }
-  
+
         function _emscripten_get_gamepad_status(index, gamepadState) {
           if (index < 0 || index >= JSEvents.lastGamepadState.length) return -5;
           if (!JSEvents.lastGamepadState[index]) return -7;
           __fillGamepadEventData(gamepadState, JSEvents.lastGamepadState[index]);
           return 0
         }
-  
+
         function _emscripten_get_heap_size() {
           return HEAP8.length
         }
-  
+
         function _emscripten_get_num_gamepads() {
           return JSEvents.lastGamepadState.length
         }
-  
+
         function _emscripten_glActiveTexture(x0) {
           GLctx["activeTexture"](x0)
         }
-  
+
         function _emscripten_glAttachShader(program, shader) {
           GLctx.attachShader(GL.programs[program], GL.shaders[shader])
         }
-  
+
         function _emscripten_glBeginQueryEXT(target, id) {
           GLctx.disjointTimerQueryExt["beginQueryEXT"](target, GL.timerQueriesEXT[id])
         }
-  
+
         function _emscripten_glBindAttribLocation(program, index, name) {
           GLctx.bindAttribLocation(GL.programs[program], index, UTF8ToString(name))
         }
-  
+
         function _emscripten_glBindBuffer(target, buffer) {
           GLctx.bindBuffer(target, GL.buffers[buffer])
         }
-  
+
         function _emscripten_glBindFramebuffer(target, framebuffer) {
           GLctx.bindFramebuffer(target, GL.framebuffers[framebuffer])
         }
-  
+
         function _emscripten_glBindRenderbuffer(target, renderbuffer) {
           GLctx.bindRenderbuffer(target, GL.renderbuffers[renderbuffer])
         }
-  
+
         function _emscripten_glBindTexture(target, texture) {
           GLctx.bindTexture(target, GL.textures[texture])
         }
-  
+
         function _emscripten_glBindVertexArrayOES(vao) {
           GLctx["bindVertexArray"](GL.vaos[vao])
         }
-  
+
         function _emscripten_glBlendColor(x0, x1, x2, x3) {
           GLctx["blendColor"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glBlendEquation(x0) {
           GLctx["blendEquation"](x0)
         }
-  
+
         function _emscripten_glBlendEquationSeparate(x0, x1) {
           GLctx["blendEquationSeparate"](x0, x1)
         }
-  
+
         function _emscripten_glBlendFunc(x0, x1) {
           GLctx["blendFunc"](x0, x1)
         }
-  
+
         function _emscripten_glBlendFuncSeparate(x0, x1, x2, x3) {
           GLctx["blendFuncSeparate"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glBufferData(target, size, data, usage) {
           GLctx.bufferData(target, data ? HEAPU8.subarray(data, data + size) : size, usage)
         }
-  
+
         function _emscripten_glBufferSubData(target, offset, size, data) {
           GLctx.bufferSubData(target, offset, HEAPU8.subarray(data, data + size))
         }
-  
+
         function _emscripten_glCheckFramebufferStatus(x0) {
           return GLctx["checkFramebufferStatus"](x0)
         }
-  
+
         function _emscripten_glClear(x0) {
           GLctx["clear"](x0)
         }
-  
+
         function _emscripten_glClearColor(x0, x1, x2, x3) {
           GLctx["clearColor"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glClearDepthf(x0) {
           GLctx["clearDepth"](x0)
         }
-  
+
         function _emscripten_glClearStencil(x0) {
           GLctx["clearStencil"](x0)
         }
-  
+
         function _emscripten_glColorMask(red, green, blue, alpha) {
           GLctx.colorMask(!!red, !!green, !!blue, !!alpha)
         }
-  
+
         function _emscripten_glCompileShader(shader) {
           GLctx.compileShader(GL.shaders[shader])
         }
-  
+
         function _emscripten_glCompressedTexImage2D(target, level, internalFormat, width, height, border, imageSize, data) {
           GLctx["compressedTexImage2D"](target, level, internalFormat, width, height, border, data ? HEAPU8.subarray(data, data + imageSize) : null)
         }
-  
+
         function _emscripten_glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data) {
           GLctx["compressedTexSubImage2D"](target, level, xoffset, yoffset, width, height, format, data ? HEAPU8.subarray(data, data + imageSize) : null)
         }
-  
+
         function _emscripten_glCopyTexImage2D(x0, x1, x2, x3, x4, x5, x6, x7) {
           GLctx["copyTexImage2D"](x0, x1, x2, x3, x4, x5, x6, x7)
         }
-  
+
         function _emscripten_glCopyTexSubImage2D(x0, x1, x2, x3, x4, x5, x6, x7) {
           GLctx["copyTexSubImage2D"](x0, x1, x2, x3, x4, x5, x6, x7)
         }
-  
+
         function _emscripten_glCreateProgram() {
           var id = GL.getNewId(GL.programs);
           var program = GLctx.createProgram();
@@ -6583,17 +6583,17 @@ var EmulatorJS = (function () {
           GL.programs[id] = program;
           return id
         }
-  
+
         function _emscripten_glCreateShader(shaderType) {
           var id = GL.getNewId(GL.shaders);
           GL.shaders[id] = GLctx.createShader(shaderType);
           return id
         }
-  
+
         function _emscripten_glCullFace(x0) {
           GLctx["cullFace"](x0)
         }
-  
+
         function _emscripten_glDeleteBuffers(n, buffers) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[buffers + i * 4 >> 2];
@@ -6606,7 +6606,7 @@ var EmulatorJS = (function () {
             if (id == GL.currElementArrayBuffer) GL.currElementArrayBuffer = 0
           }
         }
-  
+
         function _emscripten_glDeleteFramebuffers(n, framebuffers) {
           for (var i = 0; i < n; ++i) {
             var id = HEAP32[framebuffers + i * 4 >> 2];
@@ -6617,7 +6617,7 @@ var EmulatorJS = (function () {
             GL.framebuffers[id] = null
           }
         }
-  
+
         function _emscripten_glDeleteProgram(id) {
           if (!id) return;
           var program = GL.programs[id];
@@ -6630,7 +6630,7 @@ var EmulatorJS = (function () {
           GL.programs[id] = null;
           GL.programInfos[id] = null
         }
-  
+
         function _emscripten_glDeleteQueriesEXT(n, ids) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[ids + i * 4 >> 2];
@@ -6640,7 +6640,7 @@ var EmulatorJS = (function () {
             GL.timerQueriesEXT[id] = null
           }
         }
-  
+
         function _emscripten_glDeleteRenderbuffers(n, renderbuffers) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[renderbuffers + i * 4 >> 2];
@@ -6651,7 +6651,7 @@ var EmulatorJS = (function () {
             GL.renderbuffers[id] = null
           }
         }
-  
+
         function _emscripten_glDeleteShader(id) {
           if (!id) return;
           var shader = GL.shaders[id];
@@ -6662,7 +6662,7 @@ var EmulatorJS = (function () {
           GLctx.deleteShader(shader);
           GL.shaders[id] = null
         }
-  
+
         function _emscripten_glDeleteTextures(n, textures) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[textures + i * 4 >> 2];
@@ -6673,7 +6673,7 @@ var EmulatorJS = (function () {
             GL.textures[id] = null
           }
         }
-  
+
         function _emscripten_glDeleteVertexArraysOES(n, vaos) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[vaos + i * 4 >> 2];
@@ -6681,40 +6681,40 @@ var EmulatorJS = (function () {
             GL.vaos[id] = null
           }
         }
-  
+
         function _emscripten_glDepthFunc(x0) {
           GLctx["depthFunc"](x0)
         }
-  
+
         function _emscripten_glDepthMask(flag) {
           GLctx.depthMask(!!flag)
         }
-  
+
         function _emscripten_glDepthRangef(x0, x1) {
           GLctx["depthRange"](x0, x1)
         }
-  
+
         function _emscripten_glDetachShader(program, shader) {
           GLctx.detachShader(GL.programs[program], GL.shaders[shader])
         }
-  
+
         function _emscripten_glDisable(x0) {
           GLctx["disable"](x0)
         }
-  
+
         function _emscripten_glDisableVertexAttribArray(index) {
           GLctx.disableVertexAttribArray(index)
         }
-  
+
         function _emscripten_glDrawArrays(mode, first, count) {
           GLctx.drawArrays(mode, first, count)
         }
-  
+
         function _emscripten_glDrawArraysInstancedANGLE(mode, first, count, primcount) {
           GLctx["drawArraysInstanced"](mode, first, count, primcount)
         }
         var __tempFixedLengthArray = [];
-  
+
         function _emscripten_glDrawBuffersWEBGL(n, bufs) {
           var bufArray = __tempFixedLengthArray[n];
           for (var i = 0; i < n; i++) {
@@ -6722,55 +6722,55 @@ var EmulatorJS = (function () {
           }
           GLctx["drawBuffers"](bufArray)
         }
-  
+
         function _emscripten_glDrawElements(mode, count, type, indices) {
           GLctx.drawElements(mode, count, type, indices)
         }
-  
+
         function _emscripten_glDrawElementsInstancedANGLE(mode, count, type, indices, primcount) {
           GLctx["drawElementsInstanced"](mode, count, type, indices, primcount)
         }
-  
+
         function _emscripten_glEnable(x0) {
           GLctx["enable"](x0)
         }
-  
+
         function _emscripten_glEnableVertexAttribArray(index) {
           GLctx.enableVertexAttribArray(index)
         }
-  
+
         function _emscripten_glEndQueryEXT(target) {
           GLctx.disjointTimerQueryExt["endQueryEXT"](target)
         }
-  
+
         function _emscripten_glFinish() {
           GLctx["finish"]()
         }
-  
+
         function _emscripten_glFlush() {
           GLctx["flush"]()
         }
-  
+
         function _emscripten_glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer) {
           GLctx.framebufferRenderbuffer(target, attachment, renderbuffertarget, GL.renderbuffers[renderbuffer])
         }
-  
+
         function _emscripten_glFramebufferTexture2D(target, attachment, textarget, texture, level) {
           GLctx.framebufferTexture2D(target, attachment, textarget, GL.textures[texture], level)
         }
-  
+
         function _emscripten_glFrontFace(x0) {
           GLctx["frontFace"](x0)
         }
-  
+
         function _emscripten_glGenBuffers(n, buffers) {
           __glGenObject(n, buffers, "createBuffer", GL.buffers)
         }
-  
+
         function _emscripten_glGenFramebuffers(n, ids) {
           __glGenObject(n, ids, "createFramebuffer", GL.framebuffers)
         }
-  
+
         function _emscripten_glGenQueriesEXT(n, ids) {
           for (var i = 0; i < n; i++) {
             var query = GLctx.disjointTimerQueryExt["createQueryEXT"]();
@@ -6785,23 +6785,23 @@ var EmulatorJS = (function () {
             HEAP32[ids + i * 4 >> 2] = id
           }
         }
-  
+
         function _emscripten_glGenRenderbuffers(n, renderbuffers) {
           __glGenObject(n, renderbuffers, "createRenderbuffer", GL.renderbuffers)
         }
-  
+
         function _emscripten_glGenTextures(n, textures) {
           __glGenObject(n, textures, "createTexture", GL.textures)
         }
-  
+
         function _emscripten_glGenVertexArraysOES(n, arrays) {
           __glGenObject(n, arrays, "createVertexArray", GL.vaos)
         }
-  
+
         function _emscripten_glGenerateMipmap(x0) {
           GLctx["generateMipmap"](x0)
         }
-  
+
         function _emscripten_glGetActiveAttrib(program, index, bufSize, length, size, type, name) {
           program = GL.programs[program];
           var info = GLctx.getActiveAttrib(program, index);
@@ -6815,7 +6815,7 @@ var EmulatorJS = (function () {
           if (size) HEAP32[size >> 2] = info.size;
           if (type) HEAP32[type >> 2] = info.type
         }
-  
+
         function _emscripten_glGetActiveUniform(program, index, bufSize, length, size, type, name) {
           program = GL.programs[program];
           var info = GLctx.getActiveUniform(program, index);
@@ -6829,7 +6829,7 @@ var EmulatorJS = (function () {
           if (size) HEAP32[size >> 2] = info.size;
           if (type) HEAP32[type >> 2] = info.type
         }
-  
+
         function _emscripten_glGetAttachedShaders(program, maxCount, count, shaders) {
           var result = GLctx.getAttachedShaders(GL.programs[program]);
           var len = result.length;
@@ -6842,15 +6842,15 @@ var EmulatorJS = (function () {
             HEAP32[shaders + i * 4 >> 2] = id
           }
         }
-  
+
         function _emscripten_glGetAttribLocation(program, name) {
           return GLctx.getAttribLocation(GL.programs[program], UTF8ToString(name))
         }
-  
+
         function _emscripten_glGetBooleanv(name_, p) {
           emscriptenWebGLGet(name_, p, "Boolean")
         }
-  
+
         function _emscripten_glGetBufferParameteriv(target, value, data) {
           if (!data) {
             GL.recordError(1281);
@@ -6858,7 +6858,7 @@ var EmulatorJS = (function () {
           }
           HEAP32[data >> 2] = GLctx.getBufferParameter(target, value)
         }
-  
+
         function _emscripten_glGetError() {
           if (GL.lastError) {
             var error = GL.lastError;
@@ -6868,11 +6868,11 @@ var EmulatorJS = (function () {
             return GLctx.getError()
           }
         }
-  
+
         function _emscripten_glGetFloatv(name_, p) {
           emscriptenWebGLGet(name_, p, "Float")
         }
-  
+
         function _emscripten_glGetFramebufferAttachmentParameteriv(target, attachment, pname, params) {
           var result = GLctx.getFramebufferAttachmentParameter(target, attachment, pname);
           if (result instanceof WebGLRenderbuffer || result instanceof WebGLTexture) {
@@ -6880,11 +6880,11 @@ var EmulatorJS = (function () {
           }
           HEAP32[params >> 2] = result
         }
-  
+
         function _emscripten_glGetIntegerv(name_, p) {
           emscriptenWebGLGet(name_, p, "Integer")
         }
-  
+
         function _emscripten_glGetProgramInfoLog(program, maxLength, length, infoLog) {
           var log = GLctx.getProgramInfoLog(GL.programs[program]);
           if (log === null) log = "(unknown error)";
@@ -6895,7 +6895,7 @@ var EmulatorJS = (function () {
             if (length) HEAP32[length >> 2] = 0
           }
         }
-  
+
         function _emscripten_glGetProgramiv(program, pname, p) {
           if (!p) {
             GL.recordError(1281);
@@ -6942,7 +6942,7 @@ var EmulatorJS = (function () {
             HEAP32[p >> 2] = GLctx.getProgramParameter(GL.programs[program], pname)
           }
         }
-  
+
         function _emscripten_glGetQueryObjecti64vEXT(id, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -6958,7 +6958,7 @@ var EmulatorJS = (function () {
           }
           tempI64 = [ret >>> 0, (tempDouble = ret, +Math_abs(tempDouble) >= 1 ? tempDouble > 0 ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) | 0) >>> 0 : ~~+Math_ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[params >> 2] = tempI64[0], HEAP32[params + 4 >> 2] = tempI64[1]
         }
-  
+
         function _emscripten_glGetQueryObjectivEXT(id, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -6974,7 +6974,7 @@ var EmulatorJS = (function () {
           }
           HEAP32[params >> 2] = ret
         }
-  
+
         function _emscripten_glGetQueryObjectui64vEXT(id, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -6990,7 +6990,7 @@ var EmulatorJS = (function () {
           }
           tempI64 = [ret >>> 0, (tempDouble = ret, +Math_abs(tempDouble) >= 1 ? tempDouble > 0 ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) | 0) >>> 0 : ~~+Math_ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[params >> 2] = tempI64[0], HEAP32[params + 4 >> 2] = tempI64[1]
         }
-  
+
         function _emscripten_glGetQueryObjectuivEXT(id, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -7006,7 +7006,7 @@ var EmulatorJS = (function () {
           }
           HEAP32[params >> 2] = ret
         }
-  
+
         function _emscripten_glGetQueryivEXT(target, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -7014,7 +7014,7 @@ var EmulatorJS = (function () {
           }
           HEAP32[params >> 2] = GLctx.disjointTimerQueryExt["getQueryEXT"](target, pname)
         }
-  
+
         function _emscripten_glGetRenderbufferParameteriv(target, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -7022,7 +7022,7 @@ var EmulatorJS = (function () {
           }
           HEAP32[params >> 2] = GLctx.getRenderbufferParameter(target, pname)
         }
-  
+
         function _emscripten_glGetShaderInfoLog(shader, maxLength, length, infoLog) {
           var log = GLctx.getShaderInfoLog(GL.shaders[shader]);
           if (log === null) log = "(unknown error)";
@@ -7033,14 +7033,14 @@ var EmulatorJS = (function () {
             if (length) HEAP32[length >> 2] = 0
           }
         }
-  
+
         function _emscripten_glGetShaderPrecisionFormat(shaderType, precisionType, range, precision) {
           var result = GLctx.getShaderPrecisionFormat(shaderType, precisionType);
           HEAP32[range >> 2] = result.rangeMin;
           HEAP32[range + 4 >> 2] = result.rangeMax;
           HEAP32[precision >> 2] = result.precision
         }
-  
+
         function _emscripten_glGetShaderSource(shader, bufSize, length, source) {
           var result = GLctx.getShaderSource(GL.shaders[shader]);
           if (!result) return;
@@ -7051,7 +7051,7 @@ var EmulatorJS = (function () {
             if (length) HEAP32[length >> 2] = 0
           }
         }
-  
+
         function _emscripten_glGetShaderiv(shader, pname, p) {
           if (!p) {
             GL.recordError(1281);
@@ -7069,14 +7069,14 @@ var EmulatorJS = (function () {
             HEAP32[p >> 2] = GLctx.getShaderParameter(GL.shaders[shader], pname)
           }
         }
-  
+
         function stringToNewUTF8(jsString) {
           var length = lengthBytesUTF8(jsString) + 1;
           var cString = _malloc(length);
           stringToUTF8(jsString, cString, length);
           return cString
         }
-  
+
         function _emscripten_glGetString(name_) {
           if (GL.stringCache[name_]) return GL.stringCache[name_];
           var ret;
@@ -7123,7 +7123,7 @@ var EmulatorJS = (function () {
           GL.stringCache[name_] = ret;
           return ret
         }
-  
+
         function _emscripten_glGetTexParameterfv(target, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -7131,7 +7131,7 @@ var EmulatorJS = (function () {
           }
           HEAPF32[params >> 2] = GLctx.getTexParameter(target, pname)
         }
-  
+
         function _emscripten_glGetTexParameteriv(target, pname, params) {
           if (!params) {
             GL.recordError(1281);
@@ -7139,7 +7139,7 @@ var EmulatorJS = (function () {
           }
           HEAP32[params >> 2] = GLctx.getTexParameter(target, pname)
         }
-  
+
         function _emscripten_glGetUniformLocation(program, name) {
           name = UTF8ToString(name);
           var arrayIndex = 0;
@@ -7155,7 +7155,7 @@ var EmulatorJS = (function () {
             return -1
           }
         }
-  
+
         function emscriptenWebGLGetUniform(program, location, params, type) {
           if (!params) {
             GL.recordError(1281);
@@ -7188,17 +7188,17 @@ var EmulatorJS = (function () {
             }
           }
         }
-  
+
         function _emscripten_glGetUniformfv(program, location, params) {
           console.log("22222");
           emscriptenWebGLGetUniform(program, location, params, "Float")
         }
-  
+
         function _emscripten_glGetUniformiv(program, location, params) {
           console.log("22222");
           emscriptenWebGLGetUniform(program, location, params, "Integer")
         }
-  
+
         function _emscripten_glGetVertexAttribPointerv(index, pname, pointer) {
           console.log("22222");
           if (!pointer) {
@@ -7207,7 +7207,7 @@ var EmulatorJS = (function () {
           }
           HEAP32[pointer >> 2] = GLctx.getVertexAttribOffset(index, pname)
         }
-  
+
         function emscriptenWebGLGetVertexAttrib(index, pname, params, type) {
           console.log("22222");
           if (!params) {
@@ -7249,100 +7249,100 @@ var EmulatorJS = (function () {
             }
           }
         }
-  
+
         function _emscripten_glGetVertexAttribfv(index, pname, params) {
           console.log("22222");
           emscriptenWebGLGetVertexAttrib(index, pname, params, "Float")
         }
-  
+
         function _emscripten_glGetVertexAttribiv(index, pname, params) {
           console.log("22222");
           emscriptenWebGLGetVertexAttrib(index, pname, params, "FloatToInteger")
         }
-  
+
         function _emscripten_glHint(x0, x1) {
           console.log("22222");
           GLctx["hint"](x0, x1)
         }
-  
+
         function _emscripten_glIsBuffer(buffer) {
           console.log("22222");
           var b = GL.buffers[buffer];
           if (!b) return 0;
           return GLctx.isBuffer(b)
         }
-  
+
         function _emscripten_glIsEnabled(x0) {
           return GLctx["isEnabled"](x0)
         }
-  
+
         function _emscripten_glIsFramebuffer(framebuffer) {
           console.log("22222");
           var fb = GL.framebuffers[framebuffer];
           if (!fb) return 0;
           return GLctx.isFramebuffer(fb)
         }
-  
+
         function _emscripten_glIsProgram(program) {
           program = GL.programs[program];
           if (!program) return 0;
           return GLctx.isProgram(program)
         }
-  
+
         function _emscripten_glIsQueryEXT(id) {
           var query = GL.timerQueriesEXT[id];
           if (!query) return 0;
           return GLctx.disjointTimerQueryExt["isQueryEXT"](query)
         }
-  
+
         function _emscripten_glIsRenderbuffer(renderbuffer) {
           var rb = GL.renderbuffers[renderbuffer];
           if (!rb) return 0;
           return GLctx.isRenderbuffer(rb)
         }
-  
+
         function _emscripten_glIsShader(shader) {
           var s = GL.shaders[shader];
           if (!s) return 0;
           return GLctx.isShader(s)
         }
-  
+
         function _emscripten_glIsTexture(id) {
           var texture = GL.textures[id];
           if (!texture) return 0;
           return GLctx.isTexture(texture)
         }
-  
+
         function _emscripten_glIsVertexArrayOES(array) {
           var vao = GL.vaos[array];
           if (!vao) return 0;
           return GLctx["isVertexArray"](vao)
         }
-  
+
         function _emscripten_glLineWidth(x0) {
           GLctx["lineWidth"](x0)
         }
-  
+
         function _emscripten_glLinkProgram(program) {
           GLctx.linkProgram(GL.programs[program]);
           GL.populateUniformTable(program)
         }
-  
+
         function _emscripten_glPixelStorei(pname, param) {
           if (pname == 3317) {
             GL.unpackAlignment = param
           }
           GLctx.pixelStorei(pname, param)
         }
-  
+
         function _emscripten_glPolygonOffset(x0, x1) {
           GLctx["polygonOffset"](x0, x1)
         }
-  
+
         function _emscripten_glQueryCounterEXT(id, target) {
           GLctx.disjointTimerQueryExt["queryCounterEXT"](GL.timerQueriesEXT[id], target)
         }
-  
+
         function __computeUnpackAlignedImageSize(width, height, sizePerPixel, alignment) {
           function roundedToNextMultipleOf(x, y) {
             return x + y - 1 & -y
@@ -7372,7 +7372,7 @@ var EmulatorJS = (function () {
           34042: 4,
           36193: 2
         };
-  
+
         function emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat) {
           var sizePerPixel = __colorChannelsInGlTextureFormat[format] * __sizeOfGlTextureElementType[type];
           if (!sizePerPixel) {
@@ -7399,7 +7399,7 @@ var EmulatorJS = (function () {
               GL.recordError(1280)
           }
         }
-  
+
         function _emscripten_glReadPixels(x, y, width, height, format, type, pixels) {
           var pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, format);
           if (!pixelData) {
@@ -7408,86 +7408,86 @@ var EmulatorJS = (function () {
           }
           GLctx.readPixels(x, y, width, height, format, type, pixelData)
         }
-  
+
         function _emscripten_glReleaseShaderCompiler() {}
-  
+
         function _emscripten_glRenderbufferStorage(x0, x1, x2, x3) {
           GLctx["renderbufferStorage"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glSampleCoverage(value, invert) {
           GLctx.sampleCoverage(value, !!invert)
         }
-  
+
         function _emscripten_glScissor(x0, x1, x2, x3) {
           GLctx["scissor"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glShaderBinary() {
           GL.recordError(1280)
         }
-  
+
         function _emscripten_glShaderSource(shader, count, string, length) {
           var source = GL.getSource(shader, count, string, length);
           GLctx.shaderSource(GL.shaders[shader], source)
         }
-  
+
         function _emscripten_glStencilFunc(x0, x1, x2) {
           GLctx["stencilFunc"](x0, x1, x2)
         }
-  
+
         function _emscripten_glStencilFuncSeparate(x0, x1, x2, x3) {
           GLctx["stencilFuncSeparate"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glStencilMask(x0) {
           GLctx["stencilMask"](x0)
         }
-  
+
         function _emscripten_glStencilMaskSeparate(x0, x1) {
           GLctx["stencilMaskSeparate"](x0, x1)
         }
-  
+
         function _emscripten_glStencilOp(x0, x1, x2) {
           GLctx["stencilOp"](x0, x1, x2)
         }
-  
+
         function _emscripten_glStencilOpSeparate(x0, x1, x2, x3) {
           GLctx["stencilOpSeparate"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glTexImage2D(target, level, internalFormat, width, height, border, format, type, pixels) {
           GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, pixels ? emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat) : null)
         }
-  
+
         function _emscripten_glTexParameterf(x0, x1, x2) {
           GLctx["texParameterf"](x0, x1, x2)
         }
-  
+
         function _emscripten_glTexParameterfv(target, pname, params) {
           var param = HEAPF32[params >> 2];
           GLctx.texParameterf(target, pname, param)
         }
-  
+
         function _emscripten_glTexParameteri(x0, x1, x2) {
           GLctx["texParameteri"](x0, x1, x2)
         }
-  
+
         function _emscripten_glTexParameteriv(target, pname, params) {
           var param = HEAP32[params >> 2];
           GLctx.texParameteri(target, pname, param)
         }
-  
+
         function _emscripten_glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels) {
           var pixelData = null;
           if (pixels) pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, 0);
           GLctx.texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixelData)
         }
-  
+
         function _emscripten_glUniform1f(location, v0) {
           GLctx.uniform1f(GL.uniforms[location], v0)
         }
-  
+
         function _emscripten_glUniform1fv(location, count, value) {
           if (count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[count - 1];
@@ -7499,19 +7499,19 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform1fv(GL.uniforms[location], view)
         }
-  
+
         function _emscripten_glUniform1i(location, v0) {
           GLctx.uniform1i(GL.uniforms[location], v0)
         }
-  
+
         function _emscripten_glUniform1iv(location, count, value) {
           GLctx.uniform1iv(GL.uniforms[location], HEAP32.subarray(value >> 2, value + count * 4 >> 2))
         }
-  
+
         function _emscripten_glUniform2f(location, v0, v1) {
           GLctx.uniform2f(GL.uniforms[location], v0, v1)
         }
-  
+
         function _emscripten_glUniform2fv(location, count, value) {
           if (2 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[2 * count - 1];
@@ -7524,19 +7524,19 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform2fv(GL.uniforms[location], view)
         }
-  
+
         function _emscripten_glUniform2i(location, v0, v1) {
           GLctx.uniform2i(GL.uniforms[location], v0, v1)
         }
-  
+
         function _emscripten_glUniform2iv(location, count, value) {
           GLctx.uniform2iv(GL.uniforms[location], HEAP32.subarray(value >> 2, value + count * 8 >> 2))
         }
-  
+
         function _emscripten_glUniform3f(location, v0, v1, v2) {
           GLctx.uniform3f(GL.uniforms[location], v0, v1, v2)
         }
-  
+
         function _emscripten_glUniform3fv(location, count, value) {
           if (3 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[3 * count - 1];
@@ -7550,19 +7550,19 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform3fv(GL.uniforms[location], view)
         }
-  
+
         function _emscripten_glUniform3i(location, v0, v1, v2) {
           GLctx.uniform3i(GL.uniforms[location], v0, v1, v2)
         }
-  
+
         function _emscripten_glUniform3iv(location, count, value) {
           GLctx.uniform3iv(GL.uniforms[location], HEAP32.subarray(value >> 2, value + count * 12 >> 2))
         }
-  
+
         function _emscripten_glUniform4f(location, v0, v1, v2, v3) {
           GLctx.uniform4f(GL.uniforms[location], v0, v1, v2, v3)
         }
-  
+
         function _emscripten_glUniform4fv(location, count, value) {
           if (4 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[4 * count - 1];
@@ -7577,15 +7577,15 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform4fv(GL.uniforms[location], view)
         }
-  
+
         function _emscripten_glUniform4i(location, v0, v1, v2, v3) {
           GLctx.uniform4i(GL.uniforms[location], v0, v1, v2, v3)
         }
-  
+
         function _emscripten_glUniform4iv(location, count, value) {
           GLctx.uniform4iv(GL.uniforms[location], HEAP32.subarray(value >> 2, value + count * 16 >> 2))
         }
-  
+
         function _emscripten_glUniformMatrix2fv(location, count, transpose, value) {
           if (4 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[4 * count - 1];
@@ -7600,7 +7600,7 @@ var EmulatorJS = (function () {
           }
           GLctx.uniformMatrix2fv(GL.uniforms[location], !!transpose, view)
         }
-  
+
         function _emscripten_glUniformMatrix3fv(location, count, transpose, value) {
           if (9 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[9 * count - 1];
@@ -7620,7 +7620,7 @@ var EmulatorJS = (function () {
           }
           GLctx.uniformMatrix3fv(GL.uniforms[location], !!transpose, view)
         }
-  
+
         function _emscripten_glUniformMatrix4fv(location, count, transpose, value) {
           if (16 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[16 * count - 1];
@@ -7647,59 +7647,59 @@ var EmulatorJS = (function () {
           }
           GLctx.uniformMatrix4fv(GL.uniforms[location], !!transpose, view)
         }
-  
+
         function _emscripten_glUseProgram(program) {
           GLctx.useProgram(GL.programs[program])
         }
-  
+
         function _emscripten_glValidateProgram(program) {
           GLctx.validateProgram(GL.programs[program])
         }
-  
+
         function _emscripten_glVertexAttrib1f(x0, x1) {
           GLctx["vertexAttrib1f"](x0, x1)
         }
-  
+
         function _emscripten_glVertexAttrib1fv(index, v) {
           GLctx.vertexAttrib1f(index, HEAPF32[v >> 2])
         }
-  
+
         function _emscripten_glVertexAttrib2f(x0, x1, x2) {
           GLctx["vertexAttrib2f"](x0, x1, x2)
         }
-  
+
         function _emscripten_glVertexAttrib2fv(index, v) {
           GLctx.vertexAttrib2f(index, HEAPF32[v >> 2], HEAPF32[v + 4 >> 2])
         }
-  
+
         function _emscripten_glVertexAttrib3f(x0, x1, x2, x3) {
           GLctx["vertexAttrib3f"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_glVertexAttrib3fv(index, v) {
           GLctx.vertexAttrib3f(index, HEAPF32[v >> 2], HEAPF32[v + 4 >> 2], HEAPF32[v + 8 >> 2])
         }
-  
+
         function _emscripten_glVertexAttrib4f(x0, x1, x2, x3, x4) {
           GLctx["vertexAttrib4f"](x0, x1, x2, x3, x4)
         }
-  
+
         function _emscripten_glVertexAttrib4fv(index, v) {
           GLctx.vertexAttrib4f(index, HEAPF32[v >> 2], HEAPF32[v + 4 >> 2], HEAPF32[v + 8 >> 2], HEAPF32[v + 12 >> 2])
         }
-  
+
         function _emscripten_glVertexAttribDivisorANGLE(index, divisor) {
           GLctx["vertexAttribDivisor"](index, divisor)
         }
-  
+
         function _emscripten_glVertexAttribPointer(index, size, type, normalized, stride, ptr) {
           GLctx.vertexAttribPointer(index, size, type, !!normalized, stride, ptr)
         }
-  
+
         function _emscripten_glViewport(x0, x1, x2, x3) {
           GLctx["viewport"](x0, x1, x2, x3)
         }
-  
+
         function _emscripten_request_pointerlock(target, deferUntilInEventHandler) {
           if (!target) target = "#canvas";
           target = __findEventTarget(target);
@@ -7718,7 +7718,7 @@ var EmulatorJS = (function () {
           }
           return __requestPointerLock(target)
         }
-  
+
         function _emscripten_set_canvas_element_size(target, width, height) {
           if (!Module["canvas"]) return -4;
           else if(width != Module.CanvasWidth && height !=Module.CanvasHeight){
@@ -7728,7 +7728,7 @@ var EmulatorJS = (function () {
           }
           return 0;
         }
-  
+
         function __fillMouseEventData(eventStruct, e, target) {
           return console.log(`屏蔽屏幕 按键:${e.type}}`);
           HEAPF64[eventStruct >> 3] = JSEvents.tick();
@@ -7765,7 +7765,7 @@ var EmulatorJS = (function () {
             JSEvents.previousScreenY = e.screenY
           }
         }
-  
+
         function __registerMouseEventCallback(target, userData, useCapture, callbackfunc, eventTypeId, eventTypeString, targetThread) {
           return console.log('屏蔽屏幕事件 注册'),0;
           if (!JSEvents.mouseEvent) JSEvents.mouseEvent = _malloc(72);
@@ -7786,25 +7786,25 @@ var EmulatorJS = (function () {
           if (JSEvents.isInternetExplorer() && eventTypeString == "mousedown") eventHandler.allowsDeferredCalls = false;
           JSEvents.registerOrRemoveHandler(eventHandler)
         }
-  
+
         function _emscripten_set_mousedown_callback_on_thread(target, userData, useCapture, callbackfunc, targetThread) {
           return console.log('屏蔽屏幕事件 mousedown'),0;
           __registerMouseEventCallback(target, userData, useCapture, callbackfunc, 5, "mousedown", targetThread);
           return 0
         }
-  
+
         function _emscripten_set_mousemove_callback_on_thread(target, userData, useCapture, callbackfunc, targetThread) {
           return console.log('屏蔽屏幕事件 mousemove'),0;
           __registerMouseEventCallback(target, userData, useCapture, callbackfunc, 8, "mousemove", targetThread);
           return 0
         }
-  
+
         function _emscripten_set_mouseup_callback_on_thread(target, userData, useCapture, callbackfunc, targetThread) {
           return console.log('屏蔽屏幕事件 mouseup'),0;
           __registerMouseEventCallback(target, userData, useCapture, callbackfunc, 6, "mouseup", targetThread);
           return 0
         }
-  
+
         function __registerWheelEventCallback(target, userData, useCapture, callbackfunc, eventTypeId, eventTypeString, targetThread) {
           return console.log(`屏蔽屏幕事件 ${eventTypeString}`),0;
           if (!JSEvents.wheelEvent) JSEvents.wheelEvent = _malloc(104);
@@ -7840,7 +7840,7 @@ var EmulatorJS = (function () {
           };
           JSEvents.registerOrRemoveHandler(eventHandler)
         }
-  
+
         function _emscripten_set_wheel_callback_on_thread(target, userData, useCapture, callbackfunc, targetThread) {
           return console.log(`屏蔽屏幕事件 线程`),0;
           target = __findEventTarget(target);
@@ -7854,11 +7854,11 @@ var EmulatorJS = (function () {
             return -1
           }
         }
-  
+
         function _exit(status) {
           exit(status)
         }
-  
+
         function _getenv(name) {
           if (name === 0) return 0;
           name = UTF8ToString(name);
@@ -7867,55 +7867,55 @@ var EmulatorJS = (function () {
           _getenv.ret = allocateUTF8(ENV[name]);
           return _getenv.ret
         }
-  
+
         function _glActiveTexture(x0) {
           GLctx["activeTexture"](x0)
         }
-  
+
         function _glAttachShader(program, shader) {
           GLctx.attachShader(GL.programs[program], GL.shaders[shader])
         }
-  
+
         function _glBindBuffer(target, buffer) {
           GLctx.bindBuffer(target, GL.buffers[buffer])
         }
-  
+
         function _glBindFramebuffer(target, framebuffer) {
           GLctx.bindFramebuffer(target, GL.framebuffers[framebuffer])
         }
-  
+
         function _glBindRenderbuffer(target, renderbuffer) {
           GLctx.bindRenderbuffer(target, GL.renderbuffers[renderbuffer])
         }
-  
+
         function _glBlendEquation(x0) {
           GLctx["blendEquation"](x0)
         }
-  
+
         function _glBlendFunc(x0, x1) {
           GLctx["blendFunc"](x0, x1)
         }
-  
+
         function _glBufferData(target, size, data, usage) {
           GLctx.bufferData(target, data ? HEAPU8.subarray(data, data + size) : size, usage)
         }
-  
+
         function _glCheckFramebufferStatus(x0) {
           return GLctx["checkFramebufferStatus"](x0)
         }
-  
+
         function _glClear(x0) {
           GLctx["clear"](x0)
         }
-  
+
         function _glClearColor(x0, x1, x2, x3) {
           GLctx["clearColor"](x0, x1, x2, x3)
         }
-  
+
         function _glCompileShader(shader) {
           GLctx.compileShader(GL.shaders[shader])
         }
-  
+
         function _glCreateProgram() {
           var id = GL.getNewId(GL.programs);
           var program = GLctx.createProgram();
@@ -7923,13 +7923,13 @@ var EmulatorJS = (function () {
           GL.programs[id] = program;
           return id
         }
-  
+
         function _glCreateShader(shaderType) {
           var id = GL.getNewId(GL.shaders);
           GL.shaders[id] = GLctx.createShader(shaderType);
           return id
         }
-  
+
         function _glDeleteBuffers(n, buffers) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[buffers + i * 4 >> 2];
@@ -7942,7 +7942,7 @@ var EmulatorJS = (function () {
             if (id == GL.currElementArrayBuffer) GL.currElementArrayBuffer = 0
           }
         }
-  
+
         function _glDeleteFramebuffers(n, framebuffers) {
           for (var i = 0; i < n; ++i) {
             var id = HEAP32[framebuffers + i * 4 >> 2];
@@ -7953,7 +7953,7 @@ var EmulatorJS = (function () {
             GL.framebuffers[id] = null
           }
         }
-  
+
         function _glDeleteProgram(id) {
           if (!id) return;
           var program = GL.programs[id];
@@ -7966,7 +7966,7 @@ var EmulatorJS = (function () {
           GL.programs[id] = null;
           GL.programInfos[id] = null
         }
-  
+
         function _glDeleteRenderbuffers(n, renderbuffers) {
           for (var i = 0; i < n; i++) {
             var id = HEAP32[renderbuffers + i * 4 >> 2];
@@ -7977,7 +7977,7 @@ var EmulatorJS = (function () {
             GL.renderbuffers[id] = null
           }
         }
-  
+
         function _glDeleteShader(id) {
           if (!id) return;
           var shader = GL.shaders[id];
@@ -7988,63 +7988,63 @@ var EmulatorJS = (function () {
           GLctx.deleteShader(shader);
           GL.shaders[id] = null
         }
-  
+
         function _glDisable(x0) {
           GLctx["disable"](x0)
         }
-  
+
         function _glDisableVertexAttribArray(index) {
           GLctx.disableVertexAttribArray(index)
         }
-  
+
         function _glDrawArrays(mode, first, count) {
           GLctx.drawArrays(mode, first, count)
         }
-  
+
         function _glEnable(x0) {
           GLctx["enable"](x0)
         }
-  
+
         function _glEnableVertexAttribArray(index) {
           GLctx.enableVertexAttribArray(index)
         }
-  
+
         function _glFinish() {
           GLctx["finish"]()
         }
-  
+
         function _glFlush() {
           GLctx["flush"]()
         }
-  
+
         function _glFramebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer) {
           GLctx.framebufferRenderbuffer(target, attachment, renderbuffertarget, GL.renderbuffers[renderbuffer])
         }
-  
+
         function _glFramebufferTexture2D(target, attachment, textarget, texture, level) {
           GLctx.framebufferTexture2D(target, attachment, textarget, GL.textures[texture], level)
         }
-  
+
         function _glGenBuffers(n, buffers) {
           __glGenObject(n, buffers, "createBuffer", GL.buffers)
         }
-  
+
         function _glGenFramebuffers(n, ids) {
           __glGenObject(n, ids, "createFramebuffer", GL.framebuffers)
         }
-  
+
         function _glGenRenderbuffers(n, renderbuffers) {
           __glGenObject(n, renderbuffers, "createRenderbuffer", GL.renderbuffers)
         }
-  
+
         function _glGenerateMipmap(x0) {
           GLctx["generateMipmap"](x0)
         }
-  
+
         function _glGetAttribLocation(program, name) {
           return GLctx.getAttribLocation(GL.programs[program], UTF8ToString(name))
         }
-  
+
         function _glGetError() {
           if (GL.lastError) {
             var error = GL.lastError;
@@ -8054,7 +8054,7 @@ var EmulatorJS = (function () {
             return GLctx.getError()
           }
         }
-  
+
         function _glGetProgramInfoLog(program, maxLength, length, infoLog) {
           var log = GLctx.getProgramInfoLog(GL.programs[program]);
           if (log === null) log = "(unknown error)";
@@ -8065,7 +8065,7 @@ var EmulatorJS = (function () {
             if (length) HEAP32[length >> 2] = 0
           }
         }
-  
+
         function _glGetProgramiv(program, pname, p) {
           if (!p) {
             GL.recordError(1281);
@@ -8112,7 +8112,7 @@ var EmulatorJS = (function () {
             HEAP32[p >> 2] = GLctx.getProgramParameter(GL.programs[program], pname)
           }
         }
-  
+
         function _glGetShaderInfoLog(shader, maxLength, length, infoLog) {
           var log = GLctx.getShaderInfoLog(GL.shaders[shader]);
           if (log === null) log = "(unknown error)";
@@ -8123,7 +8123,7 @@ var EmulatorJS = (function () {
             if (length) HEAP32[length >> 2] = 0
           }
         }
-  
+
         function _glGetShaderiv(shader, pname, p) {
           if (!p) {
             GL.recordError(1281);
@@ -8141,7 +8141,7 @@ var EmulatorJS = (function () {
             HEAP32[p >> 2] = GLctx.getShaderParameter(GL.shaders[shader], pname)
           }
         }
-  
+
         function _glGetString(name_) {
           if (GL.stringCache[name_]) return GL.stringCache[name_];
           var ret;
@@ -8188,7 +8188,7 @@ var EmulatorJS = (function () {
           GL.stringCache[name_] = ret;
           return ret
         }
-  
+
         function _glGetUniformLocation(program, name) {
           name = UTF8ToString(name);
           var arrayIndex = 0;
@@ -8204,25 +8204,25 @@ var EmulatorJS = (function () {
             return -1
           }
         }
-  
+
         function _glIsProgram(program) {
           program = GL.programs[program];
           if (!program) return 0;
           return GLctx.isProgram(program)
         }
-  
+
         function _glLinkProgram(program) {
           GLctx.linkProgram(GL.programs[program]);
           GL.populateUniformTable(program)
         }
-  
+
         function _glPixelStorei(pname, param) {
           if (pname == 3317) {
             GL.unpackAlignment = param
           }
           GLctx.pixelStorei(pname, param)
         }
-  
+
         function _glReadPixels(x, y, width, height, format, type, pixels) {
           var pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, format);
           if (!pixelData) {
@@ -8231,30 +8231,30 @@ var EmulatorJS = (function () {
           }
           GLctx.readPixels(x, y, width, height, format, type, pixelData)
         }
-  
+
         function _glRenderbufferStorage(x0, x1, x2, x3) {
           GLctx["renderbufferStorage"](x0, x1, x2, x3)
         }
-  
+
         function _glShaderSource(shader, count, string, length) {
           var source = GL.getSource(shader, count, string, length);
           GLctx.shaderSource(GL.shaders[shader], source)
         }
-  
+
         function _glTexImage2D(target, level, internalFormat, width, height, border, format, type, pixels) {
           GLctx.texImage2D(target, level, internalFormat, width, height, border, format, type, pixels ? emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, internalFormat) : null)
         }
-  
+
         function _glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels) {
           var pixelData = null;
           if (pixels) pixelData = emscriptenWebGLGetTexPixelData(type, format, width, height, pixels, 0);
           GLctx.texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixelData)
         }
-  
+
         function _glUniform1f(location, v0) {
           GLctx.uniform1f(GL.uniforms[location], v0)
         }
-  
+
         function _glUniform1fv(location, count, value) {
           if (count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[count - 1];
@@ -8266,15 +8266,15 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform1fv(GL.uniforms[location], view)
         }
-  
+
         function _glUniform1i(location, v0) {
           GLctx.uniform1i(GL.uniforms[location], v0)
         }
-  
+
         function _glUniform2f(location, v0, v1) {
           GLctx.uniform2f(GL.uniforms[location], v0, v1)
         }
-  
+
         function _glUniform2fv(location, count, value) {
           if (2 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[2 * count - 1];
@@ -8287,11 +8287,11 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform2fv(GL.uniforms[location], view)
         }
-  
+
         function _glUniform3f(location, v0, v1, v2) {
           GLctx.uniform3f(GL.uniforms[location], v0, v1, v2)
         }
-  
+
         function _glUniform3fv(location, count, value) {
           if (3 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[3 * count - 1];
@@ -8305,11 +8305,11 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform3fv(GL.uniforms[location], view)
         }
-  
+
         function _glUniform4f(location, v0, v1, v2, v3) {
           GLctx.uniform4f(GL.uniforms[location], v0, v1, v2, v3)
         }
-  
+
         function _glUniform4fv(location, count, value) {
           if (4 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[4 * count - 1];
@@ -8324,7 +8324,7 @@ var EmulatorJS = (function () {
           }
           GLctx.uniform4fv(GL.uniforms[location], view)
         }
-  
+
         function _glUniformMatrix4fv(location, count, transpose, value) {
           if (16 * count <= GL.MINI_TEMP_BUFFER_SIZE) {
             var view = GL.miniTempBufferViews[16 * count - 1];
@@ -8351,29 +8351,29 @@ var EmulatorJS = (function () {
           }
           GLctx.uniformMatrix4fv(GL.uniforms[location], !!transpose, view)
         }
-  
+
         function _glUseProgram(program) {
           GLctx.useProgram(GL.programs[program])
         }
-  
+
         function _glVertexAttribPointer(index, size, type, normalized, stride, ptr) {
           GLctx.vertexAttribPointer(index, size, type, !!normalized, stride, ptr)
         }
-  
+
         function _glViewport(x0, x1, x2, x3) {
           GLctx["viewport"](x0, x1, x2, x3)
         }
-  
+
         function _llvm_exp2_f32(x) {
           return Math.pow(2, x)
         }
-  
+
         function _llvm_exp2_f64(a0) {
           return _llvm_exp2_f32(a0)
         }
         var ___tm_current = 1121968;
         var ___tm_timezone = (stringToUTF8("GMT", 1122016, 4), 1122016);
-  
+
         function _tzset() {
           if (_tzset.called) return;
           _tzset.called = true;
@@ -8381,7 +8381,7 @@ var EmulatorJS = (function () {
           var winter = new Date(2e3, 0, 1);
           var summer = new Date(2e3, 6, 1);
           HEAP32[__get_daylight() >> 2] = Number(winter.getTimezoneOffset() != summer.getTimezoneOffset());
-  
+
           function extractZone(date) {
             var match = date.toTimeString().match(/\(([A-Za-z ]+)\)$/);
             return match ? match[1] : "GMT"
@@ -8398,7 +8398,7 @@ var EmulatorJS = (function () {
             HEAP32[__get_tzname() + 4 >> 2] = winterNamePtr
           }
         }
-  
+
         function _localtime_r(time, tmPtr) {
           _tzset();
           var date = new Date(HEAP32[time >> 2] * 1e3);
@@ -8421,21 +8421,21 @@ var EmulatorJS = (function () {
           HEAP32[tmPtr + 40 >> 2] = zonePtr;
           return tmPtr
         }
-  
+
         function _localtime(time) {
           return _localtime_r(time, ___tm_current)
         }
-  
+
         function _longjmp(env, value) {
           _setThrew(env, value || 1);
           throw "longjmp"
         }
-  
+
         function _emscripten_memcpy_big(dest, src, num) {
           //console.log(`${dest}--->${src}~${num}`);
           HEAPU8.set(HEAPU8.subarray(src, src + num), dest)
         }
-  
+
         function _nanosleep(rqtp, rmtp) {
           if (rqtp === 0) {
             ___setErrNo(22);
@@ -8453,11 +8453,11 @@ var EmulatorJS = (function () {
           }
           return _usleep(seconds * 1e6 + nanoseconds / 1e3)
         }
-  
+
         function abortOnCannotGrowMemory(requestedSize) {
           abort("OOM")
         }
-  
+
         function emscripten_realloc_buffer(size) {
           var PAGE_MULTIPLE = 65536;
           size = alignUp(size, PAGE_MULTIPLE);
@@ -8474,7 +8474,7 @@ var EmulatorJS = (function () {
             return false
           }
         }
-  
+
         function _emscripten_resize_heap(requestedSize) {
           var oldSize = _emscripten_get_heap_size();
           var PAGE_MULTIPLE = 65536;
@@ -8497,11 +8497,11 @@ var EmulatorJS = (function () {
           updateGlobalBufferViews();
           return true
         }
-  
+
         function __isLeapYear(year) {
           return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
         }
-  
+
         function __arraySum(array, index) {
           var sum = 0;
           for (var i = 0; i <= index; sum += array[i++]);
@@ -8509,7 +8509,7 @@ var EmulatorJS = (function () {
         }
         var __MONTH_DAYS_LEAP = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         var __MONTH_DAYS_REGULAR = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  
+
         function __addDays(date, days) {
           var newDate = new Date(date.getTime());
           while (days > 0) {
@@ -8532,7 +8532,7 @@ var EmulatorJS = (function () {
           }
           return newDate
         }
-  
+
         function _strftime(s, maxsize, format, tm) {
           var tm_zone = HEAP32[tm + 40 >> 2];
           var date = {
@@ -8584,7 +8584,7 @@ var EmulatorJS = (function () {
           }
           var WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
           var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  
+
           function leadingSomething(value, digits, character) {
             var str = typeof value === "number" ? value.toString() : value || "";
             while (str.length < digits) {
@@ -8592,11 +8592,11 @@ var EmulatorJS = (function () {
             }
             return str
           }
-  
+
           function leadingNulls(value, digits) {
             return leadingSomething(value, digits, "0")
           }
-  
+
           function compareByDay(date1, date2) {
             function sgn(value) {
               return value < 0 ? -1 : value > 0 ? 1 : 0
@@ -8609,7 +8609,7 @@ var EmulatorJS = (function () {
             }
             return compare
           }
-  
+
           function getFirstWeekStartDate(janFourth) {
             switch (janFourth.getDay()) {
               case 0:
@@ -8628,7 +8628,7 @@ var EmulatorJS = (function () {
                 return new Date(janFourth.getFullYear() - 1, 11, 30)
             }
           }
-  
+
           function getWeekBasedYear(date) {
             var thisDate = __addDays(new Date(date.tm_year + 1900, 0, 1), date.tm_yday);
             var janFourthThisYear = new Date(thisDate.getFullYear(), 0, 4);
@@ -8790,7 +8790,7 @@ var EmulatorJS = (function () {
           writeArrayToMemory(bytes, s);
           return bytes.length - 1
         }
-  
+
         function _sysconf(name) {
           switch (name) {
             case 30:
@@ -8951,7 +8951,7 @@ var EmulatorJS = (function () {
           ___setErrNo(22);
           return -1
         }
-  
+
         function _time(ptr) {
           var ret = Date.now() / 1e3 | 0;
           if (ptr) {
@@ -9015,7 +9015,7 @@ var EmulatorJS = (function () {
         }
         for (var i = 0; i < 32; i++) __tempFixedLengthArray.push(new Array(i));
         var ASSERTIONS = false;
-  
+
         function intArrayFromString(stringy, dontAddNull, length) {
           var len = length > 0 ? length : lengthBytesUTF8(stringy) + 1;
           var u8array = new Array(len);
@@ -9023,7 +9023,7 @@ var EmulatorJS = (function () {
           if (dontAddNull) u8array.length = numBytesWritten;
           return u8array
         }
-  
+
         function invoke_i(index) {
           var sp = stackSave();
           try {
@@ -9034,7 +9034,7 @@ var EmulatorJS = (function () {
             _setThrew(1, 0)
           }
         }
-  
+
         function invoke_ii(index, a1) {
           var sp = stackSave();
           try {
@@ -9045,7 +9045,7 @@ var EmulatorJS = (function () {
             _setThrew(1, 0)
           }
         }
-  
+
         function invoke_iii(index, a1, a2) {
           var sp = stackSave();
           try {
@@ -9056,7 +9056,7 @@ var EmulatorJS = (function () {
             _setThrew(1, 0)
           }
         }
-  
+
         function invoke_iiii(index, a1, a2, a3) {
           var sp = stackSave();
           try {
@@ -9067,7 +9067,7 @@ var EmulatorJS = (function () {
             _setThrew(1, 0)
           }
         }
-  
+
         function invoke_iiiiii(index, a1, a2, a3, a4, a5) {
           var sp = stackSave();
           try {
@@ -9078,7 +9078,7 @@ var EmulatorJS = (function () {
             _setThrew(1, 0)
           }
         }
-  
+
         function invoke_v(index) {
           var sp = stackSave();
           try {
@@ -9089,7 +9089,7 @@ var EmulatorJS = (function () {
             _setThrew(1, 0)
           }
         }
-  
+
         function invoke_vi(index, a1) {
           var sp = stackSave();
           try {
@@ -9100,7 +9100,7 @@ var EmulatorJS = (function () {
             _setThrew(1, 0)
           }
         }
-  
+
         function invoke_vii(index, a1, a2) {
           var sp = stackSave();
           try {
@@ -9784,7 +9784,7 @@ var EmulatorJS = (function () {
           }
           return Module
         };
-  
+
         function ExitStatus(status) {
           this.name = "ExitStatus";
           this.message = "Program terminated with exit(" + status + ")";
@@ -9828,7 +9828,7 @@ var EmulatorJS = (function () {
             calledMain = true
           }
         };
-  
+
         function run(args) {
           args = args || Module["arguments"];
           if (runDependencies > 0) {
@@ -9837,7 +9837,7 @@ var EmulatorJS = (function () {
           preRun();
           if (runDependencies > 0) return;
           if (Module["calledRun"]) return;
-  
+
           function doRun() {
             if (Module["calledRun"]) return;
             Module["calledRun"] = true;
@@ -9861,7 +9861,7 @@ var EmulatorJS = (function () {
           }
         }
         Module["run"] = run;
-  
+
         function exit(status, implicit) {
           if (implicit && Module["noExitRuntime"] && status === 0) {
             return
@@ -9874,7 +9874,7 @@ var EmulatorJS = (function () {
           }
           Module["quit"](status, new ExitStatus(status))
         }
-  
+
         function abort(what) {
           if (Module["onAbort"]) {
             Module["onAbort"](what)
@@ -9903,8 +9903,8 @@ var EmulatorJS = (function () {
           shouldRunNow = false
         }
         run();
-  
-  
+
+
         return EmulatorJS
       }
     );
