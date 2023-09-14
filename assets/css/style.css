@@ -1,0 +1,662 @@
+body {
+    margin: 0px;
+    padding: 0px;
+    background-color: #5b999f;
+    font-size: 14px;
+    zoom: 1 !important;
+}
+
+canvas {
+    background-color: #fff;
+    image-rendering: pixelated;
+}
+
+p {
+    margin: 1px;
+    padding: 1px;
+}
+
+button {
+    user-select: none;
+}
+img{
+    max-width: 100%;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+.welcome {
+    text-align: center;
+    margin: 0px auto;
+    max-width: 100vw;
+}
+.wel-btn button{
+    margin: 5px;
+}
+.wel-ul {
+    padding: .5em;
+    margin: 0px;
+    text-align: left;
+    font-size: 12px;
+    padding-left: 2em;
+}
+
+.wel-ul .db-key {
+    display: inline-block;
+    padding: 3px;
+    font-size: 14px;
+    border-radius: 5px;
+    border: 1px solid #fff;
+    margin: 8px 0px;
+}
+
+.wel-ul li:nth-child(even) .db-key {
+    background-color: #1985d1;
+    color: #fff;
+}
+
+.wel-ul li:nth-child(odd) .db-key {
+    background-color: #da1d91;
+    color: #fff;
+}
+
+.wel-game-item {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: stretch;
+    width: max-content;
+    padding: 0px;
+    margin: 5px auto;
+}
+
+.wel-game-item li {
+
+    border: 1px solid #fff;
+}
+
+.wel-game-list {
+    padding: 10px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.wel-game-list>li {
+    padding: 10px;
+}
+
+.wel-game-list li {
+    margin: 8px 5px;
+    overflow: hidden;
+    overflow-x: auto;
+}
+
+.wel-game-list li[data-rungame] * {
+    pointer-events: none;
+}
+
+.wel-game-list li:nth-child(even) {
+    background-color: #d190bb;
+}
+
+.wel-game-list li:nth-child(odd) {
+    background-color: #5abd67;
+}
+
+.wel-core-mod button {
+    border: 1px solid #fff;
+    background-color: #e66d27;
+    color: #fff;
+    outline: none;
+    border-radius: 5px;
+    margin: 10px;
+    padding: 10px;
+}
+
+.wel-core-mod button.active {
+    border: 1px solid #da1d91;
+    background-color: #3167db;
+    color: #fff;
+}
+
+.gba-body,
+.gba-mobie {
+    user-select: none;
+}
+
+.gba-message {
+    margin: auto;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #00000070;
+    color: #fff;
+    border: 1px solid #fff;
+    border-radius: 5px;
+    position: absolute;
+    z-index: 1111;
+    text-align: center;
+}
+
+.gba-mobie,
+.gba-mobie * {
+    user-select: none;
+}
+
+.gba-mobile-ctrl {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    max-height: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-content: space-around;
+}
+
+.gamepad-left {
+    width: 50%;
+    height: 200px;
+    max-width: 200px;
+    position: relative;
+    z-index: 2;
+}
+
+.gamepad-right {
+    touch-action: none;
+    width: 50%;
+    max-width: 200px;
+    height: 200px;
+    position: relative;
+}
+
+.gamepad-top {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: stretch;
+    width: 90%;
+    padding: 0px 5%;
+    height: 30px;
+    margin-bottom: 5px;
+}
+
+.gamepad-bottom {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    align-items: stretch;
+    width: 100%;
+    height: 20px;
+}
+
+.gamepad-btn {
+    outline: none;
+    border: 1px solid #fff;
+    background-color: #00000070;
+    color: #fff;
+}
+
+.gamepad-top .gamepad-btn {
+    height: 30px;
+    width: 60px;
+    border-radius: 10px;
+    font-size: 1.5rem;
+
+}
+
+.gamepad-bottom .gamepad-btn {
+    height: 20px;
+    width: 70px;
+    border-radius: 10px;
+    font-size: 0.875rem;
+}
+
+.gamepad-right .gamepad-btn:nth-child(1) {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    bottom: unset;
+    left: unset;
+    right: 50px;
+    top: 20%;
+    position: absolute;
+}
+
+.gamepad-right .gamepad-btn:nth-child(2) {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    bottom: unset;
+    left: unset;
+    right: 150px;
+    top: 30%;
+    position: absolute;
+}
+
+.gba-onstate {
+    width: 200px;
+    height: 30px;
+    line-height: 30px;
+}
+.gba-menu-top{
+    margin: 15px auto;
+}
+
+.gba-mobile-menu {
+    padding-top: 10px;
+    padding-bottom: 5px;
+    text-align: center;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    justify-content: center;
+    width: 100%;
+    opacity: .2;
+    height: 20px;
+}
+
+.gba-mobile-menu:hover,.gba-mobile-menu:focus {
+    opacity: 1;
+    background-color: #4243457a;
+}
+
+.gba-mobile-menu button {
+    margin: 0px 5px;
+    margin: 0px 5px;
+    border-radius: 5px;
+    outline: none;
+    border: 1px solid #fff;
+    color: #fff;
+    background-color: #3c85c5;
+}
+
+.gba-mobile-menu button.active {
+    background-color: #eb3939;
+}
+
+.gba-menu-win .gba-mask {
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    background-color: #000000e0;
+    z-index: 11;
+    text-align: center;
+    overflow: hidden;
+    overflow-y: auto;
+}
+
+.gba-menu-win .gba-options {
+    max-width: 350px;
+    margin: 10px auto;
+}
+
+.gba-options-home {
+    background: #0000006b;
+    color: #fff;
+}
+
+.gba-menu-win button {
+
+    margin: 5px 0px;
+    outline: none;
+    border: 1px solid #fff;
+    font-size: .875rem;
+    border-radius: 5px;
+}
+
+.gba-flex-1 {
+    display: flex;
+    flex-direction: column;
+    align-content: flex-end;
+    justify-content: flex-start;
+    align-items: stretch;
+    flex-wrap: nowrap;background: #5794c9;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.gba-flex-1 button {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.gba-flex-1 button:nth-child(even) {
+    background-color: #98d7d1;
+    color: #000;
+}
+
+.gba-flex-1 button:nth-child(odd) {
+    background-color: #e5c466;
+    color: #000;
+}
+
+.gba-flex-table {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.gba-flex-table>div {
+    display: grid;
+    align-items: center;
+    justify-content: start;
+    grid-template-columns: 60px 60px 1fr;
+    align-content: stretch;
+    justify-items: stretch;
+}
+
+.gba-options-backupstate {
+    background: aliceblue;
+    padding: 5px !important;
+    margin: 5px auto !important;
+    font-weight: bold;
+}
+
+.gba-options-backupstate .state-btn {
+    display: flex;
+    height: -webkit-fill-available;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+}
+.gba-options-cheat{
+    background: #5da3df;
+    padding: 10px 0px;
+    border-radius: 5px;
+}
+.gba-cheat-edit .act-title{
+    margin: 5px auto;
+}
+.gba-cheat-edit .act-title label{
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    justify-content: flex-start;
+    font-size: 1rem;
+}
+.gba-cheat-edit .act-title span{
+    width: 60px;
+    text-align: center;
+}
+.gba-cheat-edit .act-title input{
+    border: 1px solid #fff;
+    outline: none;
+    padding: 3px;
+    font-size: 1rem;
+    width: 200px;
+}
+.gba-cheat-edit .act-btn{
+    
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: nowrap;
+}
+.gba-cheat-edit .act-body{
+    margin: 10px auto;
+}
+.gba-cheat-edit .act-body textarea{
+    width: 90%;
+    margin: 0px auto;
+    padding: 5px;
+    outline: none;
+    font-size: 1rem;
+}
+
+.gba-cheat-list{
+    padding: 0px;
+    margin: 0px;
+    list-style: none;
+}
+.gba-cheat-list li{
+    display: flex;
+    justify-content: center;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    align-items: center;
+}
+.gba-cheat-list span{
+    
+    flex-grow: 1;
+    text-align: left;
+}
+.gba-cheat-list button{
+    margin-left: 5px;
+}
+.gba-options-time{
+    background: #d3eaff;
+}
+.gba-options-time.gba-flex-1{
+    
+    align-items: center;
+}
+.gba-options-time.gba-flex-1 button:nth-child(odd) {
+    background-color: #f9e19e;
+    color: #000;
+}
+.gba-options-time.gba-flex-1 button:nth-child(even) {
+    background-color: #b5cfcd;
+    color: #000;
+}
+.gba-ctrl-set {
+    background-color: #a18534;
+}
+
+.gba-ctrl-set ul {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    padding: 0px;
+    margin: 0px auto;
+    list-style: none;
+    max-width: 400px;
+}
+
+.gba-ctrl-set ul li {
+    display: grid;
+    grid-template-columns: 100px 1fr 1fr;
+    text-align: center;
+    color: #fff;
+    margin: 5px 0px;
+}
+
+.gba-ctrl-set ul li:nth-child(even) {
+    background-color: #da1d91;
+}
+
+.gba-ctrl-set ul li:nth-child(odd) {
+    background-color: #1985d1;
+}
+
+.gba-ctrl-set ul li:hover {
+    background-color: #000;
+}
+
+.gba-ctrl-set ul li>* {
+    align-self: center;
+}
+
+.gba-ctrl-set ul li input {
+    border-radius: 5px;
+    outline: none;
+    border: 1px solid #001;
+    background-color: #6c7975;
+    color: #fff;
+    text-align: center;
+    font-family: cursive;
+    font-size: 12px;
+    font-size: 9px;
+}
+
+.gba-ctrl-set ul li input.ctrl-have {
+    background-color: #da1d91;
+    transition: all ease-in-out .15s;
+}
+
+.gba-options-autosave .gba-options-result {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    background-color: #4c85cb;
+}
+.gba-options-audio {
+    margin: 0px !important;
+    padding: 0px;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    background: #7fafd9;
+    width: auto !important;
+    max-width: inherit !important;
+    font-size: 2rem;
+}
+
+.gba-ui {
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    right: 0px;
+}
+
+.warning {
+    color: #fff;
+    background-color: #da1d91;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+canvas {
+    display: block;
+    max-width: max(100%, calc(100vh * 160 / 240));
+    max-height: min(100%, calc(100vw * 240 / 160));
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+}
+
+@media screen and (orientation: landscape) {
+    .gba-ui {
+        position: fixed;
+        z-index: 1;
+    }
+
+    .gba-mobie {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+
+    .gba-mobile-ctrl {
+        height: 80%;
+    }
+
+    .gamepad-bottom {
+        width: 80%;
+        margin: 0px auto;
+        justify-content: space-between;
+    }
+    canvas {
+        margin: 0px auto;
+        border-left: 1px #fff solid;
+        border-right: 1px #fff solid;
+        height: 100%;
+    }
+}
+
+@media screen and (orientation: portrait) {
+    .gba-ui {
+        margin-top: var(--bh);
+        position: fixed;
+    }
+    .gba-mobile-menu{
+        opacity: 1;
+    }
+    canvas {
+        height: auto;
+        margin: 0px auto;
+        border-bottom: 1px #fff solid;
+        bottom: auto;
+    }
+}
+
+@media screen and (orientation: portrait) and (min-width:678px) {
+    .gba-ui {
+        position: fixed;
+        z-index: 1;
+        margin-top: 0px;
+    }
+
+    .gba-mobie {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+
+    .gba-mobile-ctrl {
+        height: 80%;
+    }
+
+    .gamepad-bottom {
+        width: 80%;
+        margin: 0px auto;
+        justify-content: space-between;
+    }
+}
+
+
+/*
+ 2018 support!
+ */
+@media screen and (width < calc(100vh * 240 / 160)) {
+    canvas.gba {
+        width: 100%;
+        height: auto;
+        border: none;
+        border-bottom: 1px #fff solid;
+    }
+}
+
+@media screen and (width < calc(100vh * 160 / 144)) {
+    canvas.gb {
+        width: 100%;
+        height: auto;
+        border: none;
+        border-bottom: 1px #fff solid;
+    }
+}
+
+@media screen and (height < calc(100vw * 160 / 240)) {
+    canvas.gba {
+        height: 100%;
+        width: auto;
+        border: none;
+        border-bottom: 1px #fff solid;
+    }
+}
+
+@media screen and (height < calc(100vw * 144 / 160)) {
+    canvas.gb {
+        height: 100%;
+        width: auto;
+        border: none;
+        border-bottom: 1px #fff solid;
+    }
+}

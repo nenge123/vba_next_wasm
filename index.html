@@ -1,1 +1,338 @@
-<!doctype html><html lang="cmn"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height"><title>最终GBA模拟器</title><link rel="apple-touch-icon" href="icon/gba2.png"><link rel="stylesheet" href="css/style.min.css"><body><div class="gba-body"><canvas class="gba-pic" width="600" height="400"></canvas><div class="gba-list"><div class="gba-result"></div><h3 data-btn="closelist" class="gba-list-title">点击这里关闭</h3></div><div class="gba-msg" style="display: none;" data-btn="closemsg"></div><div class="gba-ctrl"><div class="gba-ctrl-menu"><span data-btn="translate-load" class="gba-menu-btn">翻译</span><span data-btn="state-save" class="gba-menu-btn">即存</span><span data-btn="state-load" class="gba-menu-btn">即读</span><span data-btn="do-settings" class="gba-menu-btn">菜单</span></div><div class="vk" data-k="l">L</div><div class="vk" data-k="r">R</div><div class="vk" data-k="a">A</div><div class="vk" data-k="b">B</div><div class="vk" data-k="select">SELECT</div><div class="vk" data-k="start">START</div><div class="vk" data-k="left">←</div><div class="vk" data-k="right">→</div><div class="vk" data-k="up">↑</div><div class="vk" data-k="down">↓</div><div class="vk" data-k="ul"></div><div class="vk" data-k="ur"></div><div class="vk" data-k="dl"></div><div class="vk" data-k="dr"></div></div><input type="file" class="gba-file-upload" data-upload="true" value="上传" title="上传" style="display: none;visibility: hidden;"></div><script src="js/NengeApp.min.js"></script></body></html>
+<!doctype html>
+<html lang="cmn">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="viewport" content="initial-scale=1,width=device-width, height=device-height">
+    <title>最终GBA模拟器</title>
+    <link rel="apple-touch-icon" href="icon/gba2.png">
+    <link rel="stylesheet" href="assets/css/style.css">
+
+<body>
+    <div class="welcome">
+        <img src="assets/images/zan.jpg">
+        <p>全面翻新,与旧版不同,默认运行载入电子存档,而不是旧版的载入状态.不再用屎山代码,采用一条龙直写,欢迎在Github fork!</p>
+        <p>即时存档统一称为"状态",而普通存档称为电子存档.</p>
+        <div class="wel-index">
+            <div class="wel-btn">
+                <button class="wel-start-btn">运行游戏</button>
+                <button data-db="rooms">管理游戏</button>
+                <button data-db="saves">内置存档</button>
+                <button data-db="states">临时状态</button>
+                <button data-db="images">图片管理</button>
+                <button data-db="retroarch">其他管理</button>
+            </div>
+            <div class="wel-result"></div>
+            <div class="wel-core-mod">
+                <h1>设置启动核心</h1>
+                <p>不同核心直接存在差异,例如水晶版切换核心会产生性别转换.因此非必要,修改后不要更改!vbanext仅仅支持gba,mgba支持所有,gb仅仅支持gbc/gb游戏.</p>
+                <p class="warning">gb和mgba的存档和状态不兼容的!</p>
+                <button data-mod="vbanext">vbanext</button>
+                <button data-mod="mgba">mgba</button>
+                <button data-mod="gb">gb</button>
+                <p>核心编译来源<a href="//emulatorjs.com">emulatorjs.com</a> 0.5.8版本,可正常使用加速一倍,经过本人魔改RTC,金手指</p>
+            </div>
+        </div>
+        <div class="wel-start" hidden>
+            <div class="wel-start-ready">
+                <button data-do="import">导入游戏</button>
+                <button data-do="bios">写入固件</button>
+                <button data-do="shaders">写入滤镜</button>
+                <button data-do="patch">写入IPS补丁?(临时)</button>
+            </div>
+            <h3>选择一个游戏运行</h3>
+            <ul class="wel-game-list">
+                
+            </ul>
+        </div>
+    </div>
+    <div class="gba-body" hidden>
+        <canvas class="gba-pic" width="600" height="400"></canvas>
+    </div>
+    <div class="gba-ui" hidden>
+        <div class="gba-onstate gba-message" hidden>存档保存中...请勿重复操作!</div>
+        <div class="gba-mobie">
+                <div class="gba-mobile-menu">
+                    <button class="gba-mobile-loadState" data-act="loadState">即读</button>
+                    <button class="gba-mobile-openmenu" data-act="openmenu">菜单</button>
+                    <button class="gba-mobile-saveState" data-act="saveState">即存</button>
+                    <button class="gba-mobile-fastForward" data-act="fastForward">加速</button>
+                </div>
+                <div class="gba-mobile-ctrl">
+                    <div class="gamepad-top">
+                        <button class="gamepad-btn">L</button>
+                        <button class="gamepad-btn">R</button>
+                    </div>
+                    <div class="gamepad-left">
+                        <div class="gamepad-left-dp"></div>
+                    </div>
+                    <div class="gamepad-right">
+                        <button class="gamepad-btn">A</button>
+                        <button class="gamepad-btn">B</button>
+                    </div>
+                    <div class="gamepad-bottom">
+                        <button class="gamepad-btn">Select</button>
+                        <button class="gamepad-btn">Start</button>
+                    </div>
+                </div>
+        </div>
+        <div class="gba-menu-win" hidden>
+            <div class="gba-mask">
+                <div class="gba-menu-top">
+                    <button class="gba-menu-win-gohome" data-go="home" hidden>返回主菜单</button>
+                    <button class="gba-menu-win-close" data-go="close">关闭菜单</button>
+                </div>
+                <div class="gba-options-home gba-options gba-flex-1">
+                    <button data-go="base"><strong>基础操作:</strong><span class="status">重启和金手指</span></button>
+                    <button data-go="autosave"><strong>自动存档:</strong><span class="status">是否使用电子存档</span></button>
+                    <button data-go="backupstate"><strong>状态操作:</strong><span class="status">多重状态备份</span></button>
+                    <button data-go="coreoptons"><strong>核心设置:</strong><span class="status">模拟器核心设置</span></button>
+                    <button data-go="time"><strong>时间控制:</strong><span class="status">指定时间</span></button>
+                </div>
+                <div class="gba-options-base gba-options gba-flex-1" hidden>
+                    <button data-act="fastForward"><strong>加速:</strong><span>加快一倍</span></button>
+                    <button data-act="restart"><strong>重启:</strong><span>重置游戏</span></button>
+                    <button data-act="reload"><strong>重载:</strong><span>刷新页面</span></button>
+                    <button data-go="videosize"><strong>画质:</strong><span class="status">默认720p</span></button>
+                    <button data-act="pad" data-go="pad"><strong>隐藏触摸按钮:</strong><span class="status">显示</span></button>
+                    <button data-go="cheat"><strong>金手指:</strong><span class="status">未启用</span></button>
+                    <button data-go="shaders"><strong>滤镜:</strong><span class="status">未启用</span></button>
+                    <button data-go="ctrl"><strong>键位映射</strong><span>设置键盘或者手柄</span></button>
+                </div>
+                <div class="gba-options-backupstate gba-options" hidden>
+                    <p>有感于<b>究极绿宝石</b>的<b style="color: #1777af;font-size: 1rem;font-weight: unset;">我预判了你的预判</b>,单一状态无法战胜地狱</p>
+                    <div class="gba-options-result gba-flex-table">
+                        <div class="backupstate-top">
+                            <div>状态位置</div>
+                            <div>操作</div>
+                            <div>画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#1</div>
+                            <div class="state-btn" data-pos="1">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#2</div>
+                            <div class="state-btn" data-pos="2">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#3</div>
+                            <div class="state-btn" data-pos="3">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#4</div>
+                            <div class="state-btn" data-pos="4">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#5</div>
+                            <div class="state-btn" data-pos="5">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#6</div>
+                            <div class="state-btn" data-pos="6">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#7</div>
+                            <div class="state-btn" data-pos="7">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#8</div>
+                            <div class="state-btn" data-pos="8">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                        <div class="backupstate-top">
+                            <div class="state-pos">#9</div>
+                            <div class="state-btn" data-pos="9">
+                                <button data-act="read">读取</button>
+                                <button data-act="write">写入</button>
+                            </div>
+                            <div class="state-img">画面</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="gba-options-videosize gba-options gba-flex-1" hidden>
+                    <button data-act="720">720P</button>
+                    <button data-act="1080">1080P</button>
+                    <button data-act-="480">480P</button>
+                    <button data-act="240">240P</button>
+                    <button data-act="160">160P</button>
+                    <button data-act="140">140P</button>
+                </div>
+                <div class="gba-options-autosave gba-options  gba-flex-1" hidden>
+                    <p>因为全能模拟器只有关闭的时候才生成srm,如果强制保存则需要定时保存.如果没有电子存档需求请忽略此功能.适合不爱作弊的死忠粉使用!</p>
+                    <button data-act="now">保存电子存档(数据库)</button>
+                    <button data-act="imports">导入电子存档</button>
+                    <button data-act="exports">导出电子存档</button>
+                    <button data-act="0">关闭自动保存</button>
+                    <button data-act-="60">每隔1分钟</button>
+                    <button data-act="180">每隔3分钟</button>
+                    <button data-act="300">每隔5分钟</button>
+                </div>
+                <div class="gba-options-time gba-options  gba-flex-1" hidden>
+                    <button data-act="">关闭</button>
+                    <p>一秒等于一分钟</p>
+                    <button data-act="sec">秒变分</button>
+                    <p>三秒等于一小时</p>
+                    <button data-act="hour">秒变时</button>
+                    <p>三秒等于一分钟</p>
+                    <button data-act2="ff14">佛佛14时间</button>
+                    <p>指定时间</p>
+                    <input type="text" data-act="time" value="00:00:00">
+                    <button data-act="thistime">设置</button>
+                </div>
+                <div class="gba-options-ctrl gba-options" hidden>
+                    <div class="gba-options-result gba-ctrl-set">
+                        <p>手柄状态:<span class="gamepad_connect">未连接</span></p>
+                        <ul class="gba-ctrl-data">
+                            <li>
+                                <span>按键</span><span>键盘</span><span>手柄</span></li>
+                            <li>
+                                <span>UP</span>
+                                <input type="text" value="KeyW" disabled>
+                                <input type="text" value="DPAD_UP" disabled>
+                            </li>
+                            <li>
+                                <span>DOWN</span>
+                                <input type="text" value="KeyS" disabled>
+                                <input type="text" value="DPAD_DOWN" disabled>
+                            </li>
+                            <li>
+                                <span>LEFT</span>
+                                <input type="text" value="KeyA" disabled>
+                                <input type="text" value="DPAD_LEFT" disabled>
+                            </li>
+                            <li>
+                                <span>RIGHT</span>
+                                <input type="text" value="KeyD" disabled>
+                                <input type="text" value="DPAD_RIGHT" disabled>
+                            </li>
+                            <li>
+                                <span>A</span>
+                                <input type="text" value="KeyH" disabled>
+                                <input type="text" value="FACE_1" disabled>
+                            </li>
+                            <li>
+                                <span>B</span>
+                                <input type="text" value="KeyJ" disabled>
+                                <input type="text" value="FACE_2" disabled>
+                            </li>
+                            <li>
+                                <span>Select</span>
+                                <input type="text" value="KeyB" disabled>
+                                <input type="text" value="SELECT_BACK" disabled>
+                            </li>
+                            <li>
+                                <span>Start</span>
+                                <input type="text" value="KeyM" disabled>
+                                <input type="text" value="START_FORWARD" disabled>
+                            </li>
+                            <li>
+                                <span>L</span>
+                                <input type="text" value="KeyT" disabled>
+                                <input type="text" value="LEFT_TOP_SHOULDER" disabled>
+                            </li>
+                            <li>
+                                <span>R</span>
+                                <input type="text" value="KeyI" disabled>
+                                <input type="text" value="RIGHT_TOP_SHOULDER" disabled>
+                            </li>
+                            <li>
+                                <span>Turbo A</span>
+                                <input type="text" value="KeyG" disabled>
+                                <input type="text" value="FACE_3" disabled>
+                            </li>
+                            <li>
+                                <span>Turbo B</span>
+                                <input type="text" value="KeyK" disabled>
+                                <input type="text" value="FACE_4" disabled>
+                            </li>
+                            <li>
+                                <span>saveState</span>
+                                <input type="text" value="F4" disabled>
+                                <input type="text" value="LEFT_BOTTOM_SHOULDER" disabled>
+                            </li>
+                            <li>
+                                <span>loadState</span>
+                                <input type="text" value="F2" disabled>
+                                <input type="text" value="RIGHT_BOTTOM_SHOULDER" disabled>
+                            </li>
+                            <li>
+                                <span>fastForward</span>
+                                <input type="text" value="Space" disabled>
+                                <input type="text" value="" disabled>
+                            </li>
+                        </ul>
+                    </div>
+                    <div>                        
+                        <button class="ctrl-reset" type="button">重置</button>
+                    </div>
+                </div>
+                <div class="gba-options-cheat gba-options">
+                    <div class="gba-cheat-edit" data-pos="0">
+                        <div class="act-btn">
+                            <button data-act="submit">保存</button>
+                        </div>
+                        <div class="act-title"><label><span>名称:</span><input type="text" size="6"></label></div>
+                        <div class="act-body">
+                            <textarea rows="10" autocapitalize="characters"></textarea>
+                        </div>
+                        <div class="act-btn">
+                            <button data-act="submit">保存</button>
+                        </div>
+                    </div>
+                    <ul class="gba-cheat-list">
+                        <li><button data-act="add">添加</button><button data-act="reset">重置</button></li>
+                    </ul>
+                    <p>默认不会自动启用,想要关闭金手指点击重置,每次启用点击对应金手指!</p>
+                </div>
+                <div class="gba-options-audio gba-options" hidden>
+                    <p>音频意外停止,游戏已经替你暂停了!</p>
+                    <button>点击继续</button>
+                </div>
+                <div class="gba-options-shaders gba-options gba-flex-1" hidden></div>
+                <div class="gba-options-coreoptons gba-options gba-flex-1" hidden></div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="assets/js/common.js"></script>
+    <script type="text/javascript" src="assets/js/nipplejs.js"></script>
+    <script type="text/javascript" src="assets/js/gamepad.js"></script>
+    <script type="text/javascript" src="assets/js/NengeDisk.js"></script>
+    <script type="text/javascript" src="assets/js/vbanext.js"></script>
+</body>
+
+</html>
