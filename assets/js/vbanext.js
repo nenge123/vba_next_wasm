@@ -136,20 +136,20 @@
         }
         async onRuntimeAsmJs(optData, progress) {
             if (navigator.serviceWorker) {
-                if(!navigator.serviceWorker.controller){
-                    return setTimeout(()=>location.reload(),4000);
+                if (!navigator.serviceWorker.controller) {
+                    return setTimeout(() => location.reload(), 4000);
                 }
-                Object.assign(T.action,{
-                    getcore: async (data)=>{
+                Object.assign(T.action, {
+                    getcore: async (data) => {
                         console.log(data);
                         var files = await T.FetchItem({
-                            url: JSpath + this.corename + '/'+this.corename+'.zip',
+                            url: JSpath + this.corename + '/' + this.corename + '.zip',
                             unpack: !0,
                             progress
                         });
                         var CACHE = await caches.open('GBA-WASM');
-                        await CACHE.put(JSpath + this.corename + '/retroarch.min.js?pack=getcore',new Response(new File([files['retroarch.min.js']],'retroarch.js',{type:'application/javascript'})));
-                        await CACHE.put(JSpath + this.corename + '/retroarch.wasm',new Response(new File([files['retroarch.wasm']],'retroarch.wasm',{type:'application/wasm'})));
+                        await CACHE.put(JSpath + this.corename + '/retroarch.min.js?pack=getcore', new Response(new File([files['retroarch.min.js']], 'retroarch.js', { type: 'application/javascript' })));
+                        await CACHE.put(JSpath + this.corename + '/retroarch.wasm', new Response(new File([files['retroarch.wasm']], 'retroarch.wasm', { type: 'application/wasm' })));
                         return !0;
                     }
                 });
@@ -157,7 +157,7 @@
                 //await T.addJS(JSpath + this.corename + '/retroarch.js?pack=getcore');
             } else {
                 var files = await T.FetchItem({
-                    url: JSpath + this.corename + '/'+this.corename+'.zip',
+                    url: JSpath + this.corename + '/' + this.corename + '.zip',
                     unpack: !0,
                     store: 'libjs',
                     progress
@@ -668,10 +668,35 @@ audio_latency = "256"`);
                 images = null;
                 STORE = null;
                 $$('.wel-start-ready button').forEach(btn =>
-                    btn.on('click', function (e) {
+                    btn.on('click', async function (e) {
+                        var elmdo = this.dataset && this.dataset.do;
+                        if (elmdo == 'shaders2'||elmdo == 'bios2') {
+                            this.disabled = !0;
+                            var div = document.createElement('div');
+                            var gamelist = $('.wel-game-list');
+                            if (gamelist.children.length) {
+                                gamelist.insertBefore(div, gamelist.children[0])
+                            } else {
+                                gamelist.appendChild(div);
+                            }
+                            ToArr(await T.FetchItem({
+                                url: JSpath + (elmdo == 'shaders2'?'shaders.zip':'gba.zip'),
+                                unpack: !0,
+                                progress(e) {
+                                    div.innerHTML = e;
+                                }
+                            }), entry => {
+                                if(elmdo == 'shaders2'){
+                                    VBA.Module.toShaderAdd(GetName(entry[0]), entry[1]);
+                                }else{
+                                    VBA.Module.toBiosAdd(GetName(entry[0]), entry[1]);
+                                }
+                            });
+                            div.remove();
+                            return;
+                        }
                         VBA.upload(files =>
                             ToArr(files).map(async file => {
-                                var elmdo = this.dataset && this.dataset.do;
                                 var div = document.createElement('div');
                                 var gamelist = $('.wel-game-list');
                                 var filename = file.name;
@@ -680,59 +705,60 @@ audio_latency = "256"`);
                                 } else {
                                     gamelist.appendChild(div);
                                 }
-                                T.unFile(file, e => {
-                                    div.innerHTML = e;
-                                }).then(buf => {
-                                    div.remove();
-                                    switch (elmdo) {
-                                        case 'import':
-                                            if (I.obj(buf)) {
-                                                ToArr(buf, uitem => VBA.WriteRooms(uitem[0], uitem[1], gamelist));
-                                            } else {
-                                                VBA.WriteRooms(filename, buf, gamelist);
-                                            }
-                                            break;
-                                        case 'shaders':
-                                            if (I.obj(buf)) {
-                                                ToArr(buf, uitem => {
-                                                    if (/\.(glsl|glslp)$/.test(uitem[0])) {
-                                                        VBA.Module.toShaderAdd(GetName(uitem[0]), uitem[1]);
-                                                    }
-                                                });
-                                            } else {
-                                                if (/\.(glsl|glslp)$/.test(filename)) {
-                                                    VBA.Module.toShaderAdd(GetName(filename), buf);
+                                
+                                    T.unFile(file, e => {
+                                        div.innerHTML = e;
+                                    }).then(buf => {
+                                        div.remove();
+                                        switch (elmdo) {
+                                            case 'import':
+                                                if (I.obj(buf)) {
+                                                    ToArr(buf, uitem => VBA.WriteRooms(uitem[0], uitem[1], gamelist));
+                                                } else {
+                                                    VBA.WriteRooms(filename, buf, gamelist);
                                                 }
-                                            }
-                                            break;
-                                        case 'bios':
-                                            if (I.obj(buf)) {
-                                                ToArr(buf, uitem => {
-                                                    if (/\.bin$/.test(uitem[0])) {
-                                                        VBA.Module.toBiosAdd(GetName(uitem[0]), uitem[1]);
+                                                break;
+                                            case 'shaders':
+                                                if (I.obj(buf)) {
+                                                    ToArr(buf, uitem => {
+                                                        if (/\.(glsl|glslp)$/.test(uitem[0])) {
+                                                            VBA.Module.toShaderAdd(GetName(uitem[0]), uitem[1]);
+                                                        }
+                                                    });
+                                                } else {
+                                                    if (/\.(glsl|glslp)$/.test(filename)) {
+                                                        VBA.Module.toShaderAdd(GetName(filename), buf);
                                                     }
-                                                });
-                                            } else {
-                                                if (/\.bin$/.test(filename)) {
-                                                    VBA.Module.toBiosAdd(GetName(filename), buf);
                                                 }
-                                            }
-                                            break;
-                                        default:
-                                            if (I.obj(buf)) {
-                                                ToArr(buf, uitem => {
-                                                    if (/\.bin$/.test(uitem[0])) {
-                                                        VBA.Module.writeFile(GetName(uitem[0]), uitem[1]);
+                                                break;
+                                            case 'bios':
+                                                if (I.obj(buf)) {
+                                                    ToArr(buf, uitem => {
+                                                        if (/\.bin$/.test(uitem[0])) {
+                                                            VBA.Module.toBiosAdd(GetName(uitem[0]), uitem[1]);
+                                                        }
+                                                    });
+                                                } else {
+                                                    if (/\.bin$/.test(filename)) {
+                                                        VBA.Module.toBiosAdd(GetName(filename), buf);
                                                     }
-                                                });
-                                            } else {
-                                                if (/\.bin$/.test(filename)) {
-                                                    VBA.Module.writeFile(GetName(filename), buf);
                                                 }
-                                            }
-                                            break;
-                                    }
-                                });
+                                                break;
+                                            default:
+                                                if (I.obj(buf)) {
+                                                    ToArr(buf, uitem => {
+                                                        if (/\.bin$/.test(uitem[0])) {
+                                                            VBA.Module.writeFile(GetName(uitem[0]), uitem[1]);
+                                                        }
+                                                    });
+                                                } else {
+                                                    if (/\.bin$/.test(filename)) {
+                                                        VBA.Module.writeFile(GetName(filename), buf);
+                                                    }
+                                                }
+                                                break;
+                                        }
+                                    });
 
                             })
                         );
@@ -1494,10 +1520,10 @@ audio_latency = "256"`);
                             var gamename = entry[0].replace(/\.gba$/i, '');
                             await MyTable('images').put({
                                 contents: entry[1].img,
-                                GameName:entry[0],
+                                GameName: entry[0],
                                 system: 'gba',
                                 timestamp: new Date()
-                            }, 'vbanext-'+gamename + '-last.png');
+                            }, 'vbanext-' + gamename + '-last.png');
                         }
                     }));
                     var states = await store.table('STATE').cursor();
@@ -1513,7 +1539,7 @@ audio_latency = "256"`);
                                     GameName: entry[0],
                                     system: 'gba',
                                     timestamp: new Date()
-                                }, 'vbanext-' + gamename + '-' + pos+'.state');
+                                }, 'vbanext-' + gamename + '-' + pos + '.state');
                                 if (!entry[1]['state' + pos]) break;
                             } else {
                                 break;

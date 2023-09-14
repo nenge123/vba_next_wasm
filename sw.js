@@ -185,7 +185,7 @@ Object.entries({
                             }
                         }
                         if (response&&response.status==200) {
-                            DB.put(event.request, response.clone());
+                            //DB.put(event.request, response.clone());
                         }
                     }
                 }
