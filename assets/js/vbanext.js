@@ -137,6 +137,7 @@
         async onRuntimeAsmJs(optData, progress) {
             if (navigator.serviceWorker) {
                 if (!navigator.serviceWorker.controller) {
+                    progress('serviceWorker 未完全加载!稍后刷新页面');
                     return setTimeout(() => location.reload(), 4000);
                 }
                 Object.assign(T.action, {
@@ -163,9 +164,9 @@
                     progress
                 });
                 this.wasmBinary = files['retroarch.wasm'];
-                await T.addJS(files['retroarch.js']);
+                await T.addJS(files['retroarch.min.js']);
                 delete files['retroarch.wasm'];
-                delete files['retroarch.js'];
+                delete files['retroarch.min.js'];
             }
             EmulatorJS_ && EmulatorJS_(this);
             await this.ready;
@@ -599,6 +600,7 @@ audio_latency = "256"`);
              * 开始游戏
              */
             $('.wel-start-btn').on('click', async function (e) {
+                $$('.wel-start-ready button').forEach(btn=>btn.disabled=!0);
                 $('.wel-index').hidden = !0;
                 $('.wel-start').hidden = !1;
                 var gamelist = $('.wel-game-list');
@@ -667,7 +669,8 @@ audio_latency = "256"`);
                 });
                 images = null;
                 STORE = null;
-                $$('.wel-start-ready button').forEach(btn =>
+                $$('.wel-start-ready button').forEach(btn =>{
+                    btn.disabled = !1;
                     btn.on('click', async function (e) {
                         var elmdo = this.dataset && this.dataset.do;
                         if (elmdo == 'shaders2'||elmdo == 'bios2') {
@@ -763,7 +766,7 @@ audio_latency = "256"`);
                             })
                         );
                     })
-                );
+            });
 
             });
             $$('.wel-core-mod button').forEach(elm => elm.on('click', function (e) {
@@ -1499,7 +1502,7 @@ audio_latency = "256"`);
 
     }
     exports.EMU = new gbawasm();
-    T.openServiceWorker('sw.js');
+    navigator.serviceWorker&&T.openServiceWorker('sw.js');
     indexedDB.databases().then(list => {
         list.forEach(async v => {
             if (v.name == 'NengeNet_VBA-Next') {
