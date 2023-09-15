@@ -14,7 +14,7 @@ var CACHE_LIST = [
     "./assets/images/zan.jpg"
 ];
 var isLocal = location.host == '127.0.0.1';
-var version = '2023/09/15 9:34';
+var version = '2023/09/15 9:54';
 var myIDB;
 function Check(obj, k) {
     for (let a in k) if (obj[a] != k[a]) return !1;

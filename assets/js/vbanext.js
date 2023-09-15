@@ -160,9 +160,8 @@
                                 var mime = "application/"+(ext=="js"?"javascript":"wasm");
                                 var path = ext=='js'?asmpath:asmpath.replace(/(\.min)?\.js.+$/,'.wasm');
                                 var file = new File([entry[1]],entry[0], { type: mime });
-                                var reponse = new Response(file,{headers:{"Content-Type":file.type,"Content-Length":file.size},url:path,type:'basic'});
-                                console.log(reponse);
-                                return CACHE.put(path,reponse.clone());
+                                var reponse = new Response(file,{headers:{"Content-Type":file.type,"Content-Length":file.size}});
+                                return CACHE.put(path,reponse);
                             }));
                             return !0;
                         }
