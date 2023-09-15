@@ -181,8 +181,8 @@
                 delete files['retroarch.wasm'];
                 delete files['retroarch.min.js'];
             }
-            if(typeof EmulatorJS_!='undefined'){
-                EmulatorJS_(this);
+            if(exports.EmulatorJS_!=undefined){
+                exports.EmulatorJS_(this);
                 await this.ready;
                 this.toWriteStart(optData);
                 return !1;
@@ -621,7 +621,6 @@ audio_latency = "256"`);
              * 开始游戏
              */
             $('.wel-start-btn').on('click', async function (e) {
-                $$('.wel-start-ready button').forEach(btn=>btn.disabled=!0);
                 $('.wel-index').hidden = !0;
                 $('.wel-start').hidden = !1;
                 var gamelist = $('.wel-game-list');
@@ -652,6 +651,7 @@ audio_latency = "256"`);
                 var Module = new emuModulle(VBA);
                 var asmElm = document.createElement('div');
                 gamelist.appendChild(asmElm);
+                $$('.wel-start-ready button').forEach(btn=>btn.disabled=!0);
                 if(await Module.onRuntimeAsmJs(optData, a => asmElm.innerHTML = a)){
                     return;
                 }
@@ -803,7 +803,7 @@ audio_latency = "256"`);
             $('.wel-core-mod button[data-mod="' + this.corename + '"]').classList.add('active');
 
         }
-        WriteRooms(romname, data, gamelist) {
+        WriteRooms(name, data, gamelist) {
             var VBA = this;
             var li = document.createElement('li');
             if (gamelist.children.length) {
@@ -811,8 +811,8 @@ audio_latency = "256"`);
             } else {
                 gamelist.appendChild(li);
             }
-            var romsName = GetName(romname);
-            if ((this.EXTREGX).test(romsName) && data.byteLength > 0x10000) {
+            var romsName = GetName(name);
+            if (VBA.EXTREGX.test(romsName) && data.byteLength > 0x10000) {
                 var system = GetExt(romsName);
                 system = system == 'gba' ? 'gba' : 'gb';
                 MyTable('rooms').put({ contents: data, system, timestamp: new Date }, romsName);
