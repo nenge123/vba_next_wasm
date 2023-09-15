@@ -144,7 +144,7 @@
                     if (!navigator.serviceWorker.controller) {
                         T.action['pwa_activate'] = ()=>location.reload();
                         progress('serviceWorker 未完全加载!稍后替你刷新页面');
-                        return;
+                        return !0;
                     }
                     Object.assign(T.action, {
                         getcore: async (data) => {
