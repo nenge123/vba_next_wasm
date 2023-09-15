@@ -162,7 +162,6 @@ Object.entries({
         return self.skipWaiting(); //跳过等待
     },
     fetch(event) {
-        if(location.host!='127.0.0.1') return;
         if (event.request.method == 'GET') {
             //拦截请求 event.request 一个请求对象
             return event.respondWith(new Promise(async resolve => {
@@ -186,7 +185,7 @@ Object.entries({
                     }
                     */
                     if (!response) {
-                        response = await fetch(event.request);
+                        response = await fetch(event.request,{ cache: 'no-cache', mode: 'same-origin', redirect: 'follow' });
                         if (!response || response.status != 200) {
                             if (url.search(location.hostname) !== -1 && /pack=/.test(url)) {
                                 //分析本地虚假地址 进行虚假worker缓存
@@ -210,7 +209,7 @@ Object.entries({
     message(event) {
         let data = event.data;
         if (data && data.constructor === Object) {
-            if (location.host == '127.0.0.1') console.log(data);
+            if (isLocal) console.log(data);
             var { action, result } = data;
             if (action == IDBDatabase.name) {
                 !myIDB && (myIDB = new IDB(data.result));
