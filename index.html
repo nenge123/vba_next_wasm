@@ -11,6 +11,7 @@
     <link rel="apple-touch-icon" href="assets/images/gba2.png">
     <link rel="mainifest" href="mainifest.json">
     <link rel="stylesheet" href="assets/css/style.css">
+
 <body>
     <div class="welcome">
         <img src="assets/images/zan.jpg">
@@ -45,11 +46,13 @@
                 <button data-do="bios2">默认固件</button>
                 <button data-do="patch">导入IPS补丁?(临时)</button>
             </div>
-            <h3>选择一个游戏运行</h3>
-            <p>没有游戏请导入手机中游戏.百度网盘的压缩文件请改名pdf用打开方式存储到手机,然后导入该pdf.</p>
             <ul class="wel-game-list">
-                
+
             </ul>
+            <div class="wel-start-tips">
+                <h3>选择一个游戏运行</h3>
+                <p>没有游戏请导入手机中游戏.百度网盘的压缩文件请改名pdf用打开方式存储到手机,然后导入该pdf.</p>
+            </div>
         </div>
     </div>
     <div class="gba-body" hidden>
@@ -58,29 +61,29 @@
     <div class="gba-ui" hidden>
         <div class="gba-onstate gba-message" hidden>存档保存中...请勿重复操作!</div>
         <div class="gba-mobie">
-                <div class="gba-mobile-menu">
-                    <button class="gba-mobile-loadState" data-act="loadState">即读</button>
-                    <button class="gba-mobile-openmenu" data-act="openmenu">菜单</button>
-                    <button class="gba-mobile-saveState" data-act="saveState">即存</button>
-                    <button class="gba-mobile-fastForward" data-act="fastForward">加速</button>
+            <div class="gba-mobile-menu">
+                <button class="gba-mobile-loadState" data-act="loadState">即读</button>
+                <button class="gba-mobile-openmenu" data-act="openmenu">菜单</button>
+                <button class="gba-mobile-saveState" data-act="saveState">即存</button>
+                <button class="gba-mobile-fastForward" data-act="fastForward">加速</button>
+            </div>
+            <div class="gba-mobile-ctrl">
+                <div class="gamepad-top">
+                    <button class="gamepad-btn">L</button>
+                    <button class="gamepad-btn">R</button>
                 </div>
-                <div class="gba-mobile-ctrl">
-                    <div class="gamepad-top">
-                        <button class="gamepad-btn">L</button>
-                        <button class="gamepad-btn">R</button>
-                    </div>
-                    <div class="gamepad-left">
-                        <div class="gamepad-left-dp"></div>
-                    </div>
-                    <div class="gamepad-right">
-                        <button class="gamepad-btn">A</button>
-                        <button class="gamepad-btn">B</button>
-                    </div>
-                    <div class="gamepad-bottom">
-                        <button class="gamepad-btn">Select</button>
-                        <button class="gamepad-btn">Start</button>
-                    </div>
+                <div class="gamepad-left">
+                    <div class="gamepad-left-dp"></div>
                 </div>
+                <div class="gamepad-right">
+                    <button class="gamepad-btn">A</button>
+                    <button class="gamepad-btn">B</button>
+                </div>
+                <div class="gamepad-bottom">
+                    <button class="gamepad-btn">Select</button>
+                    <button class="gamepad-btn">Start</button>
+                </div>
+            </div>
         </div>
         <div class="gba-menu-win" hidden>
             <div class="gba-mask">
@@ -106,7 +109,8 @@
                     <button data-go="ctrl"><strong>键位映射</strong><span>设置键盘或者手柄</span></button>
                 </div>
                 <div class="gba-options-backupstate gba-options" hidden>
-                    <p>有感于<b>究极绿宝石</b>的<b style="color: #1777af;font-size: 1rem;font-weight: unset;">我预判了你的预判</b>,单一状态无法战胜地狱</p>
+                    <p>有感于<b>究极绿宝石</b>的<b
+                            style="color: #1777af;font-size: 1rem;font-weight: unset;">我预判了你的预判</b>,单一状态无法战胜地狱</p>
                     <div class="gba-options-result gba-flex-table">
                         <div class="backupstate-top">
                             <div>状态位置</div>
@@ -190,7 +194,7 @@
                 <div class="gba-options-videosize gba-options gba-flex-1" hidden>
                     <button data-act="720">720P</button>
                     <button data-act="1080">1080P</button>
-                    <button data-act-="480">480P</button>
+                    <button data-act="480">480P</button>
                     <button data-act="240">240P</button>
                     <button data-act="160">160P</button>
                     <button data-act="140">140P</button>
@@ -201,7 +205,7 @@
                     <button data-act="imports">导入电子存档</button>
                     <button data-act="exports">导出电子存档</button>
                     <button data-act="0">关闭自动保存</button>
-                    <button data-act-="60">每隔1分钟</button>
+                    <button data-act="60">每隔1分钟</button>
                     <button data-act="180">每隔3分钟</button>
                     <button data-act="300">每隔5分钟</button>
                 </div>
@@ -222,7 +226,8 @@
                         <p>手柄状态:<span class="gamepad_connect">未连接</span></p>
                         <ul class="gba-ctrl-data">
                             <li>
-                                <span>按键</span><span>键盘</span><span>手柄</span></li>
+                                <span>按键</span><span>键盘</span><span>手柄</span>
+                            </li>
                             <li>
                                 <span>UP</span>
                                 <input type="text" value="KeyW" disabled>
@@ -300,7 +305,7 @@
                             </li>
                         </ul>
                     </div>
-                    <div>                        
+                    <div>
                         <button class="ctrl-reset" type="button">重置</button>
                     </div>
                 </div>

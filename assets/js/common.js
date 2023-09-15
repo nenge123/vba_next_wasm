@@ -471,28 +471,29 @@
             T.on(T.sw, 'error', e => {
                 console.log(e);
             });
-            var actionName = 'GETDBNAME';
             T.on(navigator.serviceWorker, "message", async (event) => {
                 let data = event.data;
                 if (I.obj(data)) {
-                    if (location.host == '127.0.0.1') console.log(data);
                     let action = data.action;
                     if (action) {
                         if (I.str(action)) {
                             if (action == 'GETDBNAME') {
                                 return T.docload(()=>{
-                                    console.load(T.action);
                                     T.PostMessage({
-                                    set: actionName,
+                                    action: 'WOKERDBNAME',
                                     result: T.DB_NAME
                                 })})
                             }
-                            let result = await T.CF(action, data);
-                            if (data.id) {
-                                data.result = result;
-                                T.PostMessage(data);
-                            } else {
-                                T.PostMessage(result);
+                            if(T.action[action]){
+                                let result = await T.CF(action, data);
+                                if (data.id) {
+                                    data.result = result;
+                                    T.PostMessage(data);
+                                } else {
+                                    T.PostMessage(result);
+                                }
+                            }else{
+                                console.log(data);
                             }
                         } else if (I.array(action)) {
                             I.FM(action, (v) => [
@@ -1181,7 +1182,7 @@
                 if (this.progress) {
                     let statustext = " ";
                     if (length && havesize <= length)
-                        statustext = I.PER(havesize, length) + '%';
+                        statustext = I.PER(havesize, length);
                     else
                         statustext = `(${(havesize / 1024).toFixed(1)
                             }KB)`;

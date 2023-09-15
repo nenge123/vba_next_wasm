@@ -5,12 +5,6 @@ body {
     font-size: 14px;
     zoom: 1 !important;
 }
-
-canvas {
-    background-color: #fff;
-    image-rendering: pixelated;
-}
-
 p {
     margin: 1px;
     padding: 1px;
@@ -574,6 +568,8 @@ canvas {
     right: 0;
     bottom: 0;
     z-index: -1;
+    background-color: #fff;
+    image-rendering: -webkit-optimize-contrast;
 }
 
 @media screen and (orientation: landscape) {
@@ -682,5 +678,15 @@ canvas {
         width: auto;
         border: none;
         border-bottom: 1px #fff solid;
+    }
+}
+
+@media screen and (orientation: landscape) and (display-mode:fullscreen) {
+    canvas{
+        width: 100% !important;
+        height: 100% !important;
+        border: none !important;
+        max-width: unset !important;
+        max-height: unset !important;
     }
 }

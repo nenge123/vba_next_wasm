@@ -60,30 +60,71 @@
     function GetExt(name) {
         return F.getExt(name);
     }
+    /**
+     * Module类
+     * @constructor
+     */
     class emuModulle {
-        //TOTAL_MEMORY: 0x10000000,
-        //INITIAL_MEMORY:167772160,
+        /**
+         * TOTAL_MEMORY/INITIAL_MEMORY 定义内存最大值
+         */
+        /*TOTAL_MEMORY: 0x10000000,*/
+        /*INITIAL_MEMORY:167772160,*/
+        /**
+         * 定义wasm Module
+         * @module emuModulle/callMain 不自动执行
+         */
         noInitialRun = !0x0;
+        /**
+         * 启动参数
+         */
         arguments = ['-v', '', 'c37f5e84f377fb892c851b364c55251132d57c66d2f3ea56d2af90bef14773f0'];
+        /**
+         * 某些通讯使用
+         */
         preRun = [];
+        /**
+         * 某些通讯使用
+         */
         postRun = [];
+        /**
+         * 某些前置配置
+         */
         totalDependencies = 0x0;
-        SRM_PTR = undefined;
+        /**
+         *@property {Number} 电子存档地址位置
+         */
+        SRM_PTR = 0;
+        /**
+         * 电子存档长度
+         */
         SRM_LEN = 0x8000;
         /**
-         * Module构造函数
-         * @param {*} emu 
-         * @constructor 
+         * 是否启用PWA缓存
          */
-        constructor(emu) {
-            var { MountConfig, FSROOT, EXTREGX, corename,isPWA} = emu;
+        isPWA = !1;
+        /**
+         * 载入对象
+         * @param {Object} emu 
+         */
+        constructor(emu,progress) {
+            var { MountConfig, FSROOT, EXTREGX, corename, isPWA} = emu;
             emu.Module = this;
+            FSROOT.etc = '/etc/';
+            var isRuntimeInitialized = new Promise(re=>{
+                /**
+                 * WASM加载完毕
+                 */
+                this._isRuntimeInitialized = re;
+            });
+
             Object.assign(this, {
                 MountConfig,
                 FSROOT,
                 corename,
                 EXTREGX,
                 isPWA,
+                isRuntimeInitialized,
                 canvas: emu.canvas || document.querySelector('canvas'),
                 print: (e) => console.log(e),
                 printErr: (e) => {
@@ -134,63 +175,109 @@
                 }
             });
             Object.defineProperty(exports, 'Module', { get: () => this });
+            progress = progress||function(e){console.log(e);};
+            this.readyASM =  this.onRuntimeAsmJs(progress);
         }
-        isLocal = location.host=='127.0.0.1';
-        async onRuntimeAsmJs(optData, progress) {
+        /**
+         * 是否本地环境
+         */
+        isLocal = location.host == '127.0.0.1';
+        /**
+         * 加载并初始化WASM
+         * @module emuModulle/onRuntimeAsmJs
+         * @param {json} optData 核心选项
+         * @param {function} progress 进度函数
+         * @returns {boolean} 是否异常
+         */
+        async onRuntimeAsmJs(progress) {
             if (this.isPWA) {
-                var asmpath = JSpath + this.corename + '/retroarch.js';
-                if(!this.isLocal){  
-                    asmpath = JSpath + this.corename + '/retroarch.min.js?pack=getcore';                  
-                    if (!navigator.serviceWorker.controller) {
-                        T.action['pwa_activate'] = ()=>location.reload();
-                        progress('serviceWorker 未完全加载!稍后替你刷新页面');
-                        return !0;
-                    }
-                    Object.assign(T.action, {
-                        getcore: async (data) => {
-                            console.log(data);
-                            var files = await T.FetchItem({
-                                url: JSpath + this.corename + '/' + this.corename + '.zip',
-                                unpack: !0,
-                                progress
-                            });
-                            var CACHE = await caches.open('GBA-WASM');
-                            await Promise.all(ToArr(files).map(entry=>{
-                                var ext = GetExt(entry[0]);
-                                var mime = "application/"+(ext=="js"?"javascript":"wasm");
-                                var path = ext=='js'?asmpath:asmpath.replace(/(\.min)?\.js.+$/,'.wasm');
-                                var file = new File([entry[1]],entry[0], { type: mime });
-                                var reponse = new Response(file,{headers:{"Content-Type":file.type,"Content-Length":file.size}});
-                                return CACHE.put(path,reponse);
-                            }));
-                            return !0;
-                        }
-                    });
-                }
-                await T.addJS(asmpath);
+                await this.onRuntimeWorker(progress);
                 //await T.addJS(JSpath + this.corename + '/retroarch.js?pack=getcore');
             } else {
-                var files = await T.FetchItem({
-                    url: JSpath + this.corename + '/' + this.corename + '.zip',
-                    unpack: !0,
-                    store: 'libjs',
-                    progress
-                });
-                this.wasmBinary = files['retroarch.wasm'];
-                await T.addJS(files['retroarch.min.js']);
-                delete files['retroarch.wasm'];
-                delete files['retroarch.min.js'];
+                await this.onRuntimeLoadDB(progress);
             }
-            if(exports.EmulatorJS_!=undefined){
+            /**
+             * @namespace exports
+             * @property {function} exports.EmulatorJS_ - fff
+             * exports/EmulatorJS_ WASM启动JS载入
+             */
+            if (exports.EmulatorJS_&&exports.EmulatorJS_.constructor===Function) {
                 exports.EmulatorJS_(this);
                 await this.ready;
-                this.toWriteStart(optData);
+                this.toWriteStart();
+                this._isRuntimeInitialized(!1);
                 return !1;
             }
-            progress('模拟器核心下载失败,请确保已经联网!下载过慢建议下载加速器加速任意外服游戏!');
-            return !0;
+            this._isRuntimeInitialized(!0);
         }
-        async onRuntimeInitialized() {
+        /**
+         * PWA虚假地址加载 本地跳过
+         * @param {function} progress 进度函数
+         */
+        async onRuntimeWorker(progress) {
+            /**
+             * 部署虚假地址
+             */
+            var asmJS = JSpath + this.corename + '/retroarch.js';
+            if (!this.isLocal) {
+                asmJS = JSpath + this.corename + '/retroarch.min.js?pack=getcore';
+                Object.assign(T.action, {
+                    /**
+                     * PWA回调函数 pack=getcore
+                     * @param {json} data worker消息
+                     * @returns {boolean}
+                     */
+                    getcore: async (data) => {
+                        console.log(data);
+                        var files = await T.FetchItem({
+                            url: JSpath + this.corename + '/' + this.corename + '.zip',
+                            unpack: !0,
+                            progress
+                        });
+                        var CACHE = await caches.open('GBA-WASM');
+                        await Promise.all(ToArr(files).map(entry => {
+                            var ext = GetExt(entry[0]);
+                            var mime = "application/" + (ext == "js" ? "javascript" : "wasm");
+                            var path = ext == 'js' ? asmJS : asmJS.replace(/(\.min)?\.js.+$/, '.wasm');
+                            var file = new File([entry[1]], entry[0], { type: mime });
+                            var reponse = new Response(
+                                file,
+                                {
+                                    headers: {
+                                        "Content-Type": file.type, "Content-Length": file.size,
+                                        'Date': new Date().toGMTString()
+                                    }
+                                });
+                            return CACHE.put(path, reponse);
+                        }));
+                        return !0;
+                    }
+                });
+            }
+            await T.addJS(asmJS);
+        }
+        /**
+         * 读取indexedDB或者解压下载核心压缩包
+         * @param {function} progress 
+         */
+        async onRuntimeLoadDB(progress) {
+            var files = await T.FetchItem({
+                url: JSpath + this.corename + '/' + this.corename + '.zip',
+                unpack: !0,
+                store: 'libjs',
+                progress
+            });
+            this.wasmBinary = files['retroarch.wasm'];
+            await T.addJS(files['retroarch.min.js']);
+            delete files['retroarch.wasm'];
+            delete files['retroarch.min.js'];
+        }
+        /**
+         * WASM加载完毕,初始化虚拟硬盘挂载,写入核心选项
+         * @param {json} optData 核心选项
+         */
+        async toWriteStart() {
+            var { MountConfig, FSROOT } = this;
             delete this.wasmBinary;
             if (this.specialHTMLTargets) {
                 var canvas = this.canvas;
@@ -203,14 +290,12 @@
                     '#canvas-mouse': this.canvas
                 });
             }
-        }
-        async toWriteStart(optData) {
-            var { MountConfig, FSROOT } = this;
             this.DISK = new NengeDisk(T.DB_NAME, MountConfig, this);
             await Promise.all(this.DISK.ready);
+            var optData = Object.entries(VBA.OptionsData).map(optionItem => `${optionItem[0]} = "${optionItem[1] || ''}"`).join('\n');
             this.mkdir(FSROOT.saves);
-            this.writeFile('/etc/retroarch-core-options.cfg', optData);
-            this.writeFile('/etc/retroarch.cfg',
+            this.writeFile(FSROOT.etc+'retroarch-core-options.cfg', optData);
+            this.writeFile(FSROOT.etc+'retroarch.cfg',
                 `savefile_directory = "${FSROOT.saves}"
 savestate_directory = "${FSROOT.saves}"
 system_directory = "${FSROOT.system}"
@@ -232,14 +317,29 @@ fastforward_ratio = "5.0"
 audio_latency = "256"`);
 
         }
+        /**
+         * 目录文件列表
+         * @param {String} path 目录
+         * @param {Boolean} bool 过滤非文件
+         * @returns {JSON} 
+         */
         toReadPath(path, bool) {
             if (this.DISK) {
                 return this.DISK.getLocalList(path, bool);
             }
         }
+        /**
+         * 获取滤镜启用文件
+         * @returns {String}
+         */
         toShaderText() {
             return this.toReadText(this.FSROOT.shaderFile)
         }
+        /**
+         * 设置/移除滤镜
+         * @param {String} name 
+         * @returns 
+         */
         toShaderSet(name) {
             if (name) {
                 var data = this.toReadFile(this.FSROOT.shader + name + '.glslp');
@@ -251,30 +351,66 @@ audio_latency = "256"`);
             }
             this.toEnableShader(!0);
         }
+        /**
+         * 写入滤镜文件
+         * @param {String} name 
+         * @param {Uint8Array|String} data 
+         */
         toShaderAdd(name, data) {
             this.writeFile(this.FSROOT.shader + name, data);
         }
+        /**
+         * 移除并关闭滤镜
+         */
         toShaderRemove() {
             this.writeFile(this.FSROOT.shaderFile, '#');
             this.toEnableShader(!1);
         }
+        /**
+         * 扫描滤镜列表
+         * @returns {Array}
+         */
         toShaderList() {
             return ToArr(this.toReadPath(this.FSROOT.shader)).filter(v => v && /\.glsl$/.test(v[0])).map(v => GetName(v[0]).replace(/\.glsl$/, ''));
         }
+        /**
+         * 写入固件
+         * @param {String} name 
+         * @param {Uint8Array} data 
+         */
         toBiosAdd(name, data) {
             this.writeFile(this.FSROOT.system + name, data);
         }
+        /**
+         * 读取虚拟硬盘里面的文本
+         * @param {String} name 
+         * @returns {String}
+         */
         toReadText(name) {
             if (!this.isPath(name)) return '';
             return new TextDecoder().decode(this.toReadFile(name))
         }
+        /**
+         * 读取虚拟硬盘里面的文件
+         * @param {String} path 
+         * @returns {Uint8Array}
+         */
         toReadFile(path) {
             if (!this.isPath(path)) return;
             return this.FS.readFile(path)
         }
+        /**
+         * 判断文件/目录是否存在
+         * @param {String} path 
+         * @returns {Boolean}
+         */
         isPath(path) {
             return this.FS.analyzePath(path).exists;
         }
+        /**
+         * 创建目录
+         * @param {String} path 
+         */
         mkdir(path) {
             let FS = this.FS;
             if (!this.isPath(path)) {
@@ -285,30 +421,35 @@ audio_latency = "256"`);
                 FS.createPath(newpath, name, !0x0, !0x0);
             }
         }
+        /**
+         * 删除文件
+         * @param {String} path 
+         */
         unlink(path) {
             if (this.isPath(path)) {
                 this.FS.unlink(path);
             }
         }
+        /**
+         * 往虚拟硬盘写入文件
+         * @param {String} path 
+         * @param {Uint8Array|String} data 
+         */
         writeFile(path, data) {
             let newpath = path.split('/').slice(0, -1).join('/');
             newpath && this.mkdir(newpath);
             this.FS.writeFile(path, data);
         }
+        /**
+         * 获取当前即时状态地址信息
+         */
         get stateValue() {
             return (this.cwrap('get_state_info', 'string', [])() || '').split('|').map(v => parseInt(v));
         }
-        get GameName() {
-            return this.arguments[1];
-        }
-        get GameFileName() {
-            return this.GameName.replace(this.EXTREGX, '');
-        }
-        get stateBuffer() {
-            var stateinfo = this.stateValue;
-            return this.HEAPU8.slice(stateinfo[1], stateinfo[1] + stateinfo[0])
-
-        }
+        /**
+         * 获取截图数据
+         * @returns {Uint8Array}
+         */
         toReadScreenshot() {
             this.cwrap('cmd_take_screenshot', '', [])();
             var imagebuf = this.toReadFile('screenshot.png');
@@ -316,6 +457,11 @@ audio_latency = "256"`);
             return imagebuf;
 
         }
+        /**
+         * 保存即时状态
+         * @param {Number} name 状态位置
+         * @param {function|undefined} fn 回调函数
+         */
         async toSaveState(name, fn) {
             var statebuf = this.stateBuffer;
             var GameName = this.GameName;
@@ -323,47 +469,46 @@ audio_latency = "256"`);
             var system = this.system;
             var timestamp = new Date;
             if (name && name.constructor === Number) {
-                var keyname = `${this.corename}-${this.GameFileName}-${name}.state`;
-                return new Promise(async re => {
-                    await MyTable('states').put({
-                        contents: new Uint8Array(statebuf),
-                        images: imagebuf,
-                        GameName,
-                        pos: name,
-                        system,
-                        timestamp,
-                    }, keyname);
-                    MyTable('images').put({ contents: imagebuf, GameName, system, timestamp }, `${this.corename}-${this.GameFileName}-last.png`);
-                    re(fn && fn(imagebuf));
-                });
+                var keyname = `${this.corename}-${this.RoomName}-${name}.state`;
+                await MyTable('states').put({
+                    contents: new Uint8Array(statebuf),
+                    images: imagebuf,
+                    GameName,
+                    pos: name,
+                    system,
+                    timestamp,
+                }, keyname);
+                await MyTable('images').put({ contents: imagebuf, GameName, system, timestamp }, `${this.corename}-${this.RoomName}-last.png`);
+                fn && fn(imagebuf);
 
             } else {
-                var keyname = `${this.corename}-${this.GameFileName}-state.png`;
-                this.writeFile(this.FSROOT.saves + `/${this.GameFileName}.state`, statebuf);
+                var keyname = `${this.corename}-${this.RoomName}-state.png`;
+                this.writeFile(this.FSROOT.saves + `/${this.RoomName}.state`, statebuf);
                 MyTable('images').put({ contents: imagebuf, GameName, system, timestamp }, keyname).then(fn);
 
             }
         }
+        /**
+         * 读取即时状态
+         * @param {Number} name 
+         */
         async toLoadState(name) {
-            if (name) {
-                if (name.constructor === Number) {
-                    var keyname = `${this.corename}-${this.GameFileName}-${name}.state`;
-                    var statebuf = await MyTable('states').getdata(keyname);
-                    if (statebuf instanceof Uint8Array) {
-                        this.writeFile('/game.state', statebuf);
-                        this.cwrap('load_state', 'number', ['string', 'number'])('game.state', 0);
-                        this.unlink('game.state');
-                    }
-                } else if (name instanceof Uint8Array) {
-                    this.writeFile('/game.state', name);
+            if (name && name.constructor === Number) {
+                var keyname = `${this.corename}-${this.RoomName}-${name}.state`;
+                var statebuf = await MyTable('states').getdata(keyname);
+                if (statebuf instanceof Uint8Array) {
+                    this.writeFile('/game.state', statebuf);
                     this.cwrap('load_state', 'number', ['string', 'number'])('game.state', 0);
                     this.unlink('game.state');
-
                 }
             } else {
                 this.cwrap('cmd_load_state', 'string', [])();
             }
         }
+        /**
+         * 保存电子存档
+         * @param {function} fn 回调函数 
+         */
         async toSaveSaves(fn) {
             var GameName = this.GameName;
             var system = this.system;
@@ -373,23 +518,43 @@ audio_latency = "256"`);
                 timestamp: new Date,
                 GameName,
                 system
-            }, `${this.corename}-${this.GameFileName}.png`);
+            }, `${this.corename}-${this.RoomName}.png`);
             fn && fn();
         }
+        /**
+         * 写入电子存档
+         * @param {Uint8Array} data 
+         */
         toSaveSRM(data) {
-            this.writeFile(this.FSROOT.saves + `/${this.GameFileName}.srm`, data);
+            this.writeFile(this.FSROOT.saves + `/${this.RoomName}.srm`, data);
         }
+        /**
+         * 根据电子存档地址读取电子存档
+         * @returns {Uint8Array}
+         */
         toReadSRM() {
             return this.HEAPU8.slice(this.SRM_PTR, this.SRM_PTR + this.SRM_LEN);
         }
+        /**
+         * 载入电子存档到内存
+         */
         toEventLoadSRM() {
-            return this.cwrap('event_load_save_files', '', [])();
+            this.cwrap('event_load_save_files', '', [])();
         }
+        /**
+         * 启用加速一倍
+         * @param {function} fn(Boolean) 回调函数
+         * @param {Number} num 加速倍率?
+         */
         toggleFastForward(fn, num) {
             this.__fastForwardState = !this.__fastForwardState;
-            this.cwrap('fast_forward', 'string', ['number'])(this.__fastForwardState ? (num || 1) : 0);
+            this.cwrap('fast_forward', 'string', ['number'])(this.__fastForwardState ? (num || 3) : 0);
             fn && fn(this.__fastForwardState);
         }
+        /**
+         * 读取模拟器核心选项
+         * @returns {JSON}
+         */
         toReadCoreOption() {
             let options = this.cwrap('get_core_options', 'string', [])();
             if (options) {
@@ -401,8 +566,12 @@ audio_latency = "256"`);
                     }));
             }
         }
+        /**
+         * 读取配置文件的核心选项
+         * @returns 
+         */
         toReadOption() {
-            var options = this.toReadText('/etc/retroarch-core-options.cfg');
+            var options = this.toReadText(this.FSROOT.etc+'retroarch-core-options.cfg');
             var result = {};
             if (options) {
                 options.split('\n').filter(v => v.trim() != '').map(opt => {
@@ -412,12 +581,20 @@ audio_latency = "256"`);
             }
             return result;
         }
+        /**
+         * 开启或者关闭滤镜
+         * @param {Boolean} bool 
+         * @returns 
+         */
         toEnableShader(bool) {
-            return this.cwrap('shader_enable', 'null', ['number'])(bool ? 1 : 0);
+            this.cwrap('shader_enable', 'null', ['number'])(bool ? 1 : 0);
         }
-        get ButtonsInput() {
-            return ["B", "Turbo B", "Select", "Start", "UP", "DOWN", "LEFT", "RIGHT", "A", "Turbo A", "L", "R"];
-        }
+        /**
+         * 发送按键状态
+         * @param {Number} index 玩家序列
+         * @param {Number} btnpost 按键序列
+         * @param {Number} state 1是/0否 按下
+         */
         toRunButton(index, btnpost, state) {
             if (btnpost !== undefined && btnpost !== null && btnpost.constructor != Number) {
                 if (isNaN(btnpost)) {
@@ -427,21 +604,38 @@ audio_latency = "256"`);
                 }
             }
             if (btnpost !== 0 && !btnpost) return;
-            return this.cwrap('simulate_input', 'null', ['number', 'number', 'number'])(index, btnpost, state);
+            this.cwrap('simulate_input', 'null', ['number', 'number', 'number'])(index, btnpost, state);
         }
+        /**
+         * 模拟一次按键点击
+         * @param {Number} num 
+         */
         toClickButton(num) {
             this.toRunButton(0, num, 1);
             setTimeout(() => this.toRunButton(0, num, 0), 500);
         }
+        /**
+         * 设置核心选项
+         */
         toSetVariable(optkey, optvalue) {
             this.cwrap('set_variable', 'null', ['string', 'string'])(optkey, optvalue);
         }
+        /**
+         * 启用一个金手指
+         * @param {*} index 金手指序列
+         * @param {*} bool 是否开启
+         * @param {*} cheat 金手指代码
+         */
         toEnableCheat(index, bool, cheat) {
             index = parseInt(index) || 0;
-            return this.cwrap('set_cheat', 'string', ['number', 'number', 'string'])(index, bool, cheat);
+            this.cwrap('set_cheat', 'string', ['number', 'number', 'string'])(index, bool, cheat);
         }
+        /**
+         * 读取金手指代码
+         * @returns {JSON} key->value
+         */
         toReadCheat() {
-            var cheatText = this.toReadText(this.FSROOT.cheat + this.GameFileName + '.cht');
+            var cheatText = this.toReadText(this.FSROOT.cheat + this.RoomName + '.cht');
             var cheatObj = {};
             var cheatList = {};
             cheatText.split('\n').forEach(line => {
@@ -460,9 +654,13 @@ audio_latency = "256"`);
             console.log(cheatObj);
             return cheatList;
         }
+        /**
+         * 保存修改的金手指
+         * @param {JSON} data 
+         */
         toSaveCheat(data) {
             var cht = '', lastkey = 0;
-            var path = this.FSROOT.cheat + this.GameFileName + '.cht';
+            var path = this.FSROOT.cheat + this.RoomName + '.cht';
             ToArr(data, (value, key) => {
                 lastkey = key + 1;
                 var cheat = value[1].replace(/\n/g, '  ');
@@ -476,12 +674,23 @@ audio_latency = "256"`);
                 this.unlink(path)
             }
         }
+        /**
+         * 重置金手指
+         */
         toResetCheat() {
-            return this.cwrap('set_cheat', 'string', [])();
+            this.cwrap('set_cheat', 'string', [])();
         }
+        /**
+         * 重启模拟器
+         */
         toSysReset() {
-            return this.cwrap('system_restart', '', [])();
+            this.cwrap('system_restart', '', [])();
         }
+        /**
+         * 运行游戏
+         * @param {String|null} name 
+         * @param {Uint8Array|null} data 
+         */
         toStartGame(name, data) {
             if (name) {
                 this.arguments[1] = name;
@@ -495,15 +704,53 @@ audio_latency = "256"`);
             this.system = system == 'gba' ? 'gba' : 'gb';
             this.canvas.classList.add(this.system);
         }
+        /**
+         * 绑定音频变化事件 可有效防止手机出现卡顿异常
+         * @param {function} fn 绑定事件函数
+         * @returns 
+         */
         toAudioChange(fn) {
             if (this.RA) {
                 this.RA.context.addEventListener('statechange', fn);
                 return !0;
             }
         }
+        /**
+         * 恢复音频
+         * @param {function} fn 回调函数
+         */
         toAudioResume(fn) {
             this.RA.context.resume().then(fn);
         }
+        /**
+         * 模拟器按键映射配置
+         */
+        get ButtonsInput() {
+            return ["B", "Turbo B", "Select", "Start", "UP", "DOWN", "LEFT", "RIGHT", "A", "Turbo A", "L", "R"];
+        }
+        /**
+         * 获取当前Rooms文件名
+         */
+         get GameName() {
+            return this.arguments[1];
+        }
+        /**
+         * 获取当前Rooms名,不含文件文件后缀
+         */
+        get RoomName() {
+            return this.GameName.replace(this.EXTREGX, '');
+        }
+        /**
+         * 获取当前即时状态Uint8Array
+         */
+        get stateBuffer() {
+            var stateinfo = this.stateValue;
+            return this.HEAPU8.slice(stateinfo[1], stateinfo[1] + stateinfo[0])
+
+        }
+        /**
+         * 自定义时间
+         */
         get NowTime() {
             if (this.timeMode) {
                 if (this.timeMode.constructor === Number) {
@@ -527,15 +774,36 @@ audio_latency = "256"`);
         }
 
     }
+    /**
+     * Module引导类
+     */
     class gbawasm {
+        /**
+         * 是否已经运行
+         */
         isRunning = !1;
+        /**
+         * 视频输出画布高 分辨率高度
+         */
         videoSize = 720;
+        /**
+         * 数据键前缀
+         */
         DBKEY = 'gba-wasm-';
+        /**
+         * 判断rooms正则
+         */
         EXTREGX = /\.(gba|gbc|gb)/i;
+        /**
+         * 虚拟硬盘挂载数据库配置
+         */
         MountConfig = {
             '/s': 'saves',
             '/u': 'retroarch',
         };
+        /**
+         * 虚拟硬盘配置路径
+         */
         FSROOT = {
             saves: '/s/',
             shader: '/u/shaders/',
@@ -543,7 +811,14 @@ audio_latency = "256"`);
             system: '/u/system/',
             cheat: '/u/cheats/',
         }
+        /**
+         * 模拟器核心名
+         */
         corename = 'mgba';
+        /**
+         * 初始化
+         * @returns 
+         */
         constructor() {
             if (!Node.prototype.once) {
                 Object.assign(Node.prototype, {
@@ -561,6 +836,10 @@ audio_latency = "256"`);
                     }
                 });
             }
+            if(this.isIPhone){
+                this.videoSize = 480;
+                this.GO_STATUS('videosize','480P')
+            }
             if (document.readyState == 'complete') return T.welcome();
             document.addEventListener('DOMContentLoaded', e => {
                 this.welcome();
@@ -569,13 +848,23 @@ audio_latency = "256"`);
                 once: true
             });
         }
-        welcome() {
+        /**
+         * 欢迎页面事件处理
+         * @returns 
+         */
+        async welcome() {
             /**设置 数据库管理 */
             var VBA = this;
-            if(this.isIPhone&&!this.isstandalone){
+            if (this.isIPhone && !this.isstandalone) {
+                /**
+                 * 阻止苹果手机浏览器
+                 */
                 $('.wel-index').innerHTML = '<p style="color:red">检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".</p>';
                 return;
             }
+            /**
+             * 数据库管理事件
+             */
             $$('.wel-btn button[data-db]').forEach(elm => elm.on('click', async function (e) {
                 var html = '';
                 var table = this.dataset.db;
@@ -585,6 +874,9 @@ audio_latency = "256"`);
                 });
                 $('.wel-result').innerHTML = `<ul class="wel-ul">${html}</ul>`;
             }));
+            /**
+             * 数据库内容处理事件
+             */
             $('.wel-result').on('click', function (e) {
                 var elm = e.target;
                 var ElmData = elm && elm.dataset;
@@ -618,14 +910,35 @@ audio_latency = "256"`);
                 }
             });
             /**
-             * 开始游戏
+             * 运行游戏前置配置事件
              */
             $('.wel-start-btn').on('click', async function (e) {
                 $('.wel-index').hidden = !0;
                 $('.wel-start').hidden = !1;
+                $('.wel-start-ready').hidden = !0;
+                $('.wel-start-tips').hidden = !0;
+                var progressElm = document.createElement('div');
                 var gamelist = $('.wel-game-list');
                 var CorePath;
                 var STORE, images;
+                progressElm.style.cssText='color: #3643e9;font-size: 1rem;font-weight: bold;text-shadow: 2px 2px 3px #8b7b7b;';
+                gamelist.appendChild(progressElm);
+                if (VBA.isPWA) {
+                    if (!navigator.serviceWorker.controller) {
+                        /**
+                         * 回调函数 表示PWA已经激活
+                         * @returns 
+                         */
+                        T.action['pwa_activate'] = function () {
+                            location.reload();
+                        }
+                        progressElm.innerHTML = 'serviceWorker 未完全加载!稍后替你刷新页面';
+                        return;
+                    }
+                }
+                /**
+                 * 根据核心配置基础信息
+                 */
                 switch (VBA.corename) {
                     case 'vbanext':
                         STORE = MyTable('rooms').index('system').cursor('timestamp', IDBKeyRange.only('gba'));
@@ -646,16 +959,19 @@ audio_latency = "256"`);
                 VBA.FSROOT.saves += CorePath;
                 VBA.FSROOT.cheat += CorePath;
                 VBA.DBKEY += VBA.corename;
+                /**
+                 * 读取已保存的模拟器核心选项设置
+                 */
                 VBA.OptionsData = JSON.parse(localStorage.getItem(VBA.DBKEY + '-core-options') || '{"gambatte_gb_colorization":"internal","mgba_sgb_borders":"OFF"}');
-                var optData = Object.entries(VBA.OptionsData).map(optionItem => `${optionItem[0]} = "${optionItem[1] || ''}"`).join('\n');
-                var Module = new emuModulle(VBA);
-                var asmElm = document.createElement('div');
-                gamelist.appendChild(asmElm);
-                $$('.wel-start-ready button').forEach(btn=>btn.disabled=!0);
-                if(await Module.onRuntimeAsmJs(optData, a => asmElm.innerHTML = a)){
+                /**
+                 * 加载模拟器Module类
+                 */
+                var Module = new emuModulle(VBA,TXT => progressElm.innerHTML = TXT);
+                if(await Module.isRuntimeInitialized){
+                    progressElm.innerHTML = '模拟器核心下载失败,请确保已经联网!下载过慢建议下载加速器加速任意外服游戏!';
                     return;
                 }
-                asmElm.remove();
+                progressElm.remove();
                 images = await images;
                 ToArr(await STORE, rooms => {
                     var [name, time] = rooms;
@@ -692,11 +1008,12 @@ audio_latency = "256"`);
                 });
                 images = null;
                 STORE = null;
-                $$('.wel-start-ready button').forEach(btn =>{
-                    btn.disabled = !1;
+                $('.wel-start-ready').hidden = !1;
+                $('.wel-start-tips').hidden = !1;
+                $$('.wel-start-ready button').forEach(btn => {
                     btn.on('click', async function (e) {
                         var elmdo = this.dataset && this.dataset.do;
-                        if (elmdo == 'shaders2'||elmdo == 'bios2') {
+                        if (elmdo == 'shaders2' || elmdo == 'bios2') {
                             this.disabled = !0;
                             var div = document.createElement('div');
                             var gamelist = $('.wel-game-list');
@@ -706,15 +1023,15 @@ audio_latency = "256"`);
                                 gamelist.appendChild(div);
                             }
                             ToArr(await T.FetchItem({
-                                url: JSpath + (elmdo == 'shaders2'?'shaders.zip':'gba.zip'),
+                                url: JSpath + (elmdo == 'shaders2' ? 'shaders.zip' : 'gba.zip'),
                                 unpack: !0,
                                 progress(e) {
                                     div.innerHTML = e;
                                 }
                             }), entry => {
-                                if(elmdo == 'shaders2'){
+                                if (elmdo == 'shaders2') {
                                     VBA.Module.toShaderAdd(GetName(entry[0]), entry[1]);
-                                }else{
+                                } else {
                                     VBA.Module.toBiosAdd(GetName(entry[0]), entry[1]);
                                 }
                             });
@@ -731,65 +1048,65 @@ audio_latency = "256"`);
                                 } else {
                                     gamelist.appendChild(div);
                                 }
-                                
-                                    T.unFile(file, e => {
-                                        div.innerHTML = e;
-                                    }).then(buf => {
-                                        div.remove();
-                                        switch (elmdo) {
-                                            case 'import':
-                                                if (I.obj(buf)) {
-                                                    ToArr(buf, uitem => VBA.WriteRooms(uitem[0], uitem[1], gamelist));
-                                                } else {
-                                                    VBA.WriteRooms(filename, buf, gamelist);
-                                                }
-                                                break;
-                                            case 'shaders':
-                                                if (I.obj(buf)) {
-                                                    ToArr(buf, uitem => {
-                                                        if (/\.(glsl|glslp)$/.test(uitem[0])) {
-                                                            VBA.Module.toShaderAdd(GetName(uitem[0]), uitem[1]);
-                                                        }
-                                                    });
-                                                } else {
-                                                    if (/\.(glsl|glslp)$/.test(filename)) {
-                                                        VBA.Module.toShaderAdd(GetName(filename), buf);
+
+                                T.unFile(file, e => {
+                                    div.innerHTML = e;
+                                }).then(buf => {
+                                    div.remove();
+                                    switch (elmdo) {
+                                        case 'import':
+                                            if (I.obj(buf)) {
+                                                ToArr(buf, uitem => VBA.WriteRooms(uitem[0], uitem[1], gamelist));
+                                            } else {
+                                                VBA.WriteRooms(filename, buf, gamelist);
+                                            }
+                                            break;
+                                        case 'shaders':
+                                            if (I.obj(buf)) {
+                                                ToArr(buf, uitem => {
+                                                    if (/\.(glsl|glslp)$/.test(uitem[0])) {
+                                                        VBA.Module.toShaderAdd(GetName(uitem[0]), uitem[1]);
                                                     }
+                                                });
+                                            } else {
+                                                if (/\.(glsl|glslp)$/.test(filename)) {
+                                                    VBA.Module.toShaderAdd(GetName(filename), buf);
                                                 }
-                                                break;
-                                            case 'bios':
-                                                if (I.obj(buf)) {
-                                                    ToArr(buf, uitem => {
-                                                        if (/\.bin$/.test(uitem[0])) {
-                                                            VBA.Module.toBiosAdd(GetName(uitem[0]), uitem[1]);
-                                                        }
-                                                    });
-                                                } else {
-                                                    if (/\.bin$/.test(filename)) {
-                                                        VBA.Module.toBiosAdd(GetName(filename), buf);
+                                            }
+                                            break;
+                                        case 'bios':
+                                            if (I.obj(buf)) {
+                                                ToArr(buf, uitem => {
+                                                    if (/\.bin$/.test(uitem[0])) {
+                                                        VBA.Module.toBiosAdd(GetName(uitem[0]), uitem[1]);
                                                     }
+                                                });
+                                            } else {
+                                                if (/\.bin$/.test(filename)) {
+                                                    VBA.Module.toBiosAdd(GetName(filename), buf);
                                                 }
-                                                break;
-                                            default:
-                                                if (I.obj(buf)) {
-                                                    ToArr(buf, uitem => {
-                                                        if (/\.bin$/.test(uitem[0])) {
-                                                            VBA.Module.writeFile(GetName(uitem[0]), uitem[1]);
-                                                        }
-                                                    });
-                                                } else {
-                                                    if (/\.bin$/.test(filename)) {
-                                                        VBA.Module.writeFile(GetName(filename), buf);
+                                            }
+                                            break;
+                                        default:
+                                            if (I.obj(buf)) {
+                                                ToArr(buf, uitem => {
+                                                    if (/\.bin$/.test(uitem[0])) {
+                                                        VBA.Module.writeFile(GetName(uitem[0]), uitem[1]);
                                                     }
+                                                });
+                                            } else {
+                                                if (/\.bin$/.test(filename)) {
+                                                    VBA.Module.writeFile(GetName(filename), buf);
                                                 }
-                                                break;
-                                        }
-                                    });
+                                            }
+                                            break;
+                                    }
+                                });
 
                             })
                         );
                     })
-            });
+                });
 
             });
             $$('.wel-core-mod button').forEach(elm => elm.on('click', function (e) {
@@ -945,7 +1262,7 @@ audio_latency = "256"`);
 
                     });
                 } else if (act == 'exports') {
-                    T.download(VBA.Module.GameFileName + '.srm', VBA.Module.toReadSRM());
+                    T.download(VBA.Module.RoomName + '.srm', VBA.Module.toReadSRM());
                 } else if (act == '0' || !act) {
                     clearInterval(VBA.Timer_autoSave);
                 } else if (act) {
@@ -1144,7 +1461,7 @@ audio_latency = "256"`);
             $('.gba-mobie').on('touchstart', e => e.preventDefault());
             $('.gba-body').on('touchstart', e => e.preventDefault());
             var portrait = window.matchMedia("(orientation: portrait)").matches;
-            document.documentElement.style.setProperty('--bh', (portrait?VBA.Module.canvas.offsetHeight:VBA.Module.canvas.offsetHeight/VBA.wh)+'px');
+            document.documentElement.style.setProperty('--bh', (portrait ? VBA.Module.canvas.offsetHeight : VBA.Module.canvas.offsetHeight / VBA.wh) + 'px');
             var audioState = VBA.Module.toAudioChange(function (event) {
                 if (event.target.state != 'running') {
                     VBA.Module.pauseMainLoop();
@@ -1486,12 +1803,12 @@ audio_latency = "256"`);
             }
             input.click();
         }
-        saveState(name) {
+        saveState() {
             if (!this.isRunning) return;
             if (this.IsOnState) return;
             this.IsOnState = !0;
             $('.gba-mobile-saveState').classList['add']('active');
-            this.Module.toSaveState(name, e => {
+            this.Module.toSaveState(0, e => {
                 $('.gba-mobile-saveState').classList['remove']('active');
                 this.IsOnState = !1;
             });
@@ -1521,22 +1838,23 @@ audio_latency = "256"`);
         }
 
     }
-    var platform = navigator.userAgentData&&navigator.userAgentData.platform||navigator.platform;
-    var isIPhone = platform=='iPhone';
+    var platform = navigator.userAgentData && navigator.userAgentData.platform || navigator.platform;
+    var isIPhone = platform == 'iPhone';
     var isPWA = !1;
     var isstandalone = navigator.standalone;
-    if(isstandalone&&isIPhone||!isIPhone){
-        if(navigator.serviceWorker){
+    if (isstandalone && isIPhone || !isIPhone) {
+        if (navigator.serviceWorker) {
             isPWA = !0;
             T.openServiceWorker('sw.js');
         }
     }
-    Object.assign(gbawasm.prototype,{
+    Object.assign(gbawasm.prototype, {
         isIPhone,
         isstandalone,
         isPWA
     });
-    exports.EMU = new gbawasm();
+    var VBA  = new gbawasm();
+    exports.VBA = VBA;
     indexedDB.databases().then(list => {
         list.forEach(async v => {
             if (v.name == 'NengeNet_VBA-Next') {

@@ -89,44 +89,79 @@ function getResponse(url, action) {
         postMessage(message);
     });
 }
-class IDB {
-    constructor(name) {
-        this.name = name;
-    }
-    open() {
-        return new Promise(resolve => {
-            var req = indexedDB.open(this.name);
-            req.addEventListener("success", e => {
-                resolve(req.result);
-            });
-        });
-    }
-    get db() {
-        if (!this.ready) this.ready = this.open();
-        return this.ready;
-    }
-    table(table) {
-        var I = this;
-        return {
-            table,
-            async transaction(ReadMode) {
-                let db = await I.db;
-                return db && db.transaction([table], ReadMode ? undefined : "readwrite").objectStore(table);
-            },
-            async get(name) {
-                let db = await this.transaction(!0);
-                if (db) return new Promise(resolve => {
-                    db.get(name).onsuccess(e => resolve(e.result));
-                })
-            },
-            async put(name, data) {
-                let db = await this.transaction(!1);
-                if (db) return new Promise(resolve => {
-                    db.put(data, name).onsuccess(e => resolve(e.result));
-                })
-            }
+function LoadDB(name){
+    return new (class {
+        constructor(name){
+            this.name = name;
         }
-    }
+        async transaction(table, ReadMode){
+            return (await this.db).transaction([table], ReadMode ? undefined : "readwrite").objectStore(table);
+        }
+        open(){
+            return new Promise(re=>{
+                var req = indexedDB.open(this.name);
+                req.onsuccess = function(e){
+                    re(req.result);
+                }
+            });
+        }
+        get db(){
+            if(!this._DB)this._DB = this.open();
+            return this._DB;
+        }
+        tables = {}
+        table(table){
+            if(this.tables[table])return this.tables[table];
+            return new(class{
+                constructor(IDB,table){
+                    Object.assign(this,{IDB,table});
+                    IDB.tables[table] = this;
+                }
+                async transaction(ReadMode){
+                    return this.IDB.transaction(table,ReadMode)
+                }
+                get read(){
+                    return this.transaction(!0)
+                }
+                get write(){
+                    return this.transaction(!1)
+                }
+                put(data,path){
+                    return new Promise(async re=>{
+                        (await this.write).put(data,path).onsuccess = function(e){re(e.target.result)};
+                    });
+                }
+                delete(path){
+                    return new Promise(async re=>{
+                        (await this.write).delete(data,path).onsuccess = function(e){re(e.target.result)};
+                    });
+                }
+                get(path){
+                    return new Promise(async re=>{
+                        (await this.read).get(data,path).onsuccess = function(e){re(e.target.result)};
+                    });
+                }
+                cursor(keyname,query, direction){
+                    return new Promise(async re=>{
+                        var data = {},db = await this.read,odb;
+                        if(keyname)odb = db.index(keyname).openKeyCursor(query, direction);
+                        else odb = db.openCursor(query, direction);
+                        odb.onsuccess = function(e){
+                            var result = e.target.result;
+                            if(result){
+                                var {primaryKey,key,value} = result;
+                                data[primaryKey] = value===undefined?key:value;
+                                result.continue();
+                            }else{
+                                re(data);
+                            }
+                        };
+                    });
+                }
+
+            })(this,table)
+        }
+    })(name)
 }
 function saveCaches(cache_name, result) {
     caches.open(cache_name).then(DB => {
@@ -158,7 +193,8 @@ Object.entries({
     },
     activate(event) {
         console.log('serviceWorker activate');
-        !myIDB && postMessage({ action: 'pwa_activate' });
+        !myIDB&&postMessage({ action: 'GETDBNAME' });
+        postMessage({ action: 'pwa_activate' });
         return self.skipWaiting(); //跳过等待
     },
     fetch(event) {
@@ -211,9 +247,9 @@ Object.entries({
         if (data && data.constructor === Object) {
             if (isLocal) console.log(data);
             var { action, result } = data;
-            if (action == IDBDatabase.name) {
-                !myIDB && (myIDB = new IDB(data.result));
-            } else if (action == Cache.name) {
+            if (action == 'WOKERDBNAME') {
+                !myIDB && (myIDB = LoadDB(result));
+            } else if (action == 'WRITECACHE') {
                 saveCaches(data.cachename || CACHE_NAME, result);
             }
         }
