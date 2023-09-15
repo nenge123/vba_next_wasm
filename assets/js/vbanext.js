@@ -1143,11 +1143,8 @@ audio_latency = "256"`);
             }));
             $('.gba-mobie').on('touchstart', e => e.preventDefault());
             $('.gba-body').on('touchstart', e => e.preventDefault());
-            document.documentElement.style.setProperty('--bh', VBA.Module.canvas.offsetHeight + 'px');
-            window.addEventListener('resize', function (e) {
-                VBA.Module.canvas.scrollIntoView();
-                document.documentElement.style.setProperty('--bh', VBA.Module.canvas.offsetHeight + 'px');
-            });
+            var portrait = window.matchMedia("(orientation: portrait)").matches;
+            document.documentElement.style.setProperty('--bh', (portrait?VBA.Module.canvas.offsetHeight:VBA.Module.canvas.offsetHeight/VBA.wh)+'px');
             var audioState = VBA.Module.toAudioChange(function (event) {
                 if (event.target.state != 'running') {
                     VBA.Module.pauseMainLoop();
