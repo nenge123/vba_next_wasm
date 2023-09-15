@@ -1,0 +1,33 @@
+{
+	"name": "GBA网页模拟器",
+	"description": "网页模拟器",
+	"icons": [
+		{
+			"src": "assets/images/gba2.png",
+			"sizes": "64x64",
+			"type": "image/png"
+		},
+		{
+			"src": "assets/images/gba2.png",
+			"sizes": "128x128",
+			"type": "image/png",
+			"purpose": "maskable"
+		},
+		{
+			"src": "assets/images/gba2.png",
+			"sizes": "256x256",
+			"type": "image/png",
+			"purpose": "maskable"
+		},
+		{
+			"src": "assets/images/gba2.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		}
+	],
+	"start_url": "/",
+	"display": "fullscreen",
+	"theme_color": "#000000",
+	"background_color": "#000000"
+}

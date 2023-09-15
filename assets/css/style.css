@@ -18,6 +18,7 @@ p {
 
 button {
     user-select: none;
+    appearance: none;
 }
 img{
     max-width: 100%;

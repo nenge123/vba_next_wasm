@@ -503,6 +503,23 @@
                 }
             });
 
+        },
+        PostMessage(str){
+            var sw = this.sw;
+            return sw&&sw.postMessage(str);
+        },
+        async openServiceWorker(file) {
+            navigator.serviceWorker.register(file).then(e => !T.sw_install && T.setServiceWorker())
+        },
+        clearWorker(js) {
+            navigator.serviceWorker.getRegistrations().then(sws => sws.forEach(sw => {
+                if (sw.active) {
+                    if (js && sw.active.scriptURL.includes(js))
+                        sw.unregister();
+                    else if (!js)
+                        sw.unregister();
+                }
+            }));
         }
     };
     const evtname = ["success"];
@@ -1910,30 +1927,9 @@
                     get() {
                         return serviceWorker.controller;
                     }
-                },
-                PostMessage: {
-                    value(str) {
-                        return T.sw.postMessage(str);
-                    }
                 }
             });
             T.setServiceWorker();
-            Object.assign(T, {
-                async openServiceWorker(file) {
-                    serviceWorker.register(file).then(e => !T.sw_install && T.setServiceWorker())
-                },
-                clearWorker(js) {
-                    serviceWorker.getRegistrations().then(sws => sws.forEach(sw => {
-                        if (sw.active) {
-                            if (js && sw.active.scriptURL.includes(js))
-                                sw.unregister();
-                            else if (!js)
-                                sw.unregister();
-                        }
-                    }));
-                }
-
-            });
         }
         /*
         let ehtml = document.documentElement;

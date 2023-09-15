@@ -76,17 +76,18 @@
          * @constructor 
          */
         constructor(emu) {
-            var { MountConfig, FSROOT, EXTREGX, corename } = emu;
+            var { MountConfig, FSROOT, EXTREGX, corename,isPWA} = emu;
             emu.Module = this;
             Object.assign(this, {
                 MountConfig,
                 FSROOT,
                 corename,
                 EXTREGX,
+                isPWA,
                 canvas: emu.canvas || document.querySelector('canvas'),
                 print: (e) => console.log(e),
                 printErr: (e) => {
-                    if (location.host == '127.0.0.1') console.warn(e);
+                    if (this.isLocal) console.warn(e);
                     if (/Video\s@\s\d+x\d+/i.test(e)) {
                         var wh = e.match(/Video\s@\s(\d+x\d+)/)[1].split('x').map(v => parseInt(v));
                         emu.wh = wh[0] / wh[1];
@@ -134,27 +135,40 @@
             });
             Object.defineProperty(exports, 'Module', { get: () => this });
         }
+        isLocal = location.host=='127.0.0.1';
         async onRuntimeAsmJs(optData, progress) {
-            if (navigator.serviceWorker) {
-                if (!navigator.serviceWorker.controller) {
-                    progress('serviceWorker 未完全加载!稍后刷新页面');
-                    return setTimeout(() => location.reload(), 4000);
-                }
-                Object.assign(T.action, {
-                    getcore: async (data) => {
-                        console.log(data);
-                        var files = await T.FetchItem({
-                            url: JSpath + this.corename + '/' + this.corename + '.zip',
-                            unpack: !0,
-                            progress
-                        });
-                        var CACHE = await caches.open('GBA-WASM');
-                        await CACHE.put(JSpath + this.corename + '/retroarch.min.js?pack=getcore', new Response(new File([files['retroarch.min.js']], 'retroarch.js', { type: 'application/javascript' })));
-                        await CACHE.put(JSpath + this.corename + '/retroarch.wasm', new Response(new File([files['retroarch.wasm']], 'retroarch.wasm', { type: 'application/wasm' })));
-                        return !0;
+            if (this.isPWA) {
+                var asmpath = JSpath + this.corename + '/retroarch.js';
+                if(!this.isLocal){  
+                    asmpath = JSpath + this.corename + '/retroarch.min.js?pack=getcore';                  
+                    if (!navigator.serviceWorker.controller) {
+                        T.action['pwa_activate'] = ()=>location.reload();
+                        progress('serviceWorker 未完全加载!稍后替你刷新页面');
+                        return;
                     }
-                });
-                await T.addJS(JSpath + this.corename + '/retroarch.min.js?pack=getcore');
+                    Object.assign(T.action, {
+                        getcore: async (data) => {
+                            console.log(data);
+                            var files = await T.FetchItem({
+                                url: JSpath + this.corename + '/' + this.corename + '.zip',
+                                unpack: !0,
+                                progress
+                            });
+                            var CACHE = await caches.open('GBA-WASM');
+                            await Promise.all(ToArr(files).map(entry=>{
+                                var ext = GetExt(entry[0]);
+                                var mime = "application/"+(ext=="js"?"javascript":"wasm");
+                                var path = ext=='js'?asmpath:asmpath.replace(/(\.min)?\.js.+$/,'.wasm');
+                                var file = new File([entry[1]],entry[0], { type: mime });
+                                var reponse = new Response(file,{headers:{"Content-Type":file.type,"Content-Length":file.size},url:path,type:'basic'});
+                                console.log(reponse);
+                                return CACHE.put(path,reponse.clone());
+                            }));
+                            return !0;
+                        }
+                    });
+                }
+                await T.addJS(asmpath);
                 //await T.addJS(JSpath + this.corename + '/retroarch.js?pack=getcore');
             } else {
                 var files = await T.FetchItem({
@@ -168,9 +182,13 @@
                 delete files['retroarch.wasm'];
                 delete files['retroarch.min.js'];
             }
-            EmulatorJS_ && EmulatorJS_(this);
-            await this.ready;
-            this.toWriteStart(optData);
+            if(typeof EmulatorJS_!='undefined'){
+                EmulatorJS_(this);
+                await this.ready;
+                this.toWriteStart(optData);
+                return !1;
+            }
+            progress('模拟器核心下载失败,请确保已经联网!下载过慢建议下载加速器加速任意外服游戏!');
             return !0;
         }
         async onRuntimeInitialized() {
@@ -555,6 +573,10 @@ audio_latency = "256"`);
         welcome() {
             /**设置 数据库管理 */
             var VBA = this;
+            if(this.isIPhone&&!this.isstandalone){
+                $('.wel-index').innerHTML = '<p style="color:red">检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".</p>';
+                return;
+            }
             $$('.wel-btn button[data-db]').forEach(elm => elm.on('click', async function (e) {
                 var html = '';
                 var table = this.dataset.db;
@@ -631,7 +653,9 @@ audio_latency = "256"`);
                 var Module = new emuModulle(VBA);
                 var asmElm = document.createElement('div');
                 gamelist.appendChild(asmElm);
-                await Module.onRuntimeAsmJs(optData, a => asmElm.innerHTML = a);
+                if(await Module.onRuntimeAsmJs(optData, a => asmElm.innerHTML = a)){
+                    return;
+                }
                 asmElm.remove();
                 images = await images;
                 ToArr(await STORE, rooms => {
@@ -1501,8 +1525,22 @@ audio_latency = "256"`);
         }
 
     }
+    var platform = navigator.userAgentData&&navigator.userAgentData.platform||navigator.platform;
+    var isIPhone = platform=='iPhone';
+    var isPWA = !1;
+    var isstandalone = navigator.standalone;
+    if(isstandalone&&isIPhone||!isIPhone){
+        if(navigator.serviceWorker){
+            isPWA = !0;
+            T.openServiceWorker('sw.js');
+        }
+    }
+    Object.assign(gbawasm.prototype,{
+        isIPhone,
+        isstandalone,
+        isPWA
+    });
     exports.EMU = new gbawasm();
-    navigator.serviceWorker&&T.openServiceWorker('sw.js');
     indexedDB.databases().then(list => {
         list.forEach(async v => {
             if (v.name == 'NengeNet_VBA-Next') {
