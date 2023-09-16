@@ -45,7 +45,7 @@ img{
     justify-content: center;
     flex-wrap: wrap;
     flex-direction: row;
-    align-items: stretch;
+    align-items: center;
 }
 .wel-start-ready button{
     margin: 5px 10px;
@@ -53,6 +53,7 @@ img{
     outline: none;
     border: 1px solid #fff;
     border-radius: 5px;
+    font-size: 1rem;
 
 }
 .wel-ul .db-key {
@@ -172,27 +173,69 @@ img{
     position: relative;
     width: 100%;
     height: 400px;
-    max-height: 100%;
+    max-height:calc(100vh - var(--bh) - 75px);
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content:flex-start;
     align-content: space-around;
 }
 
 .gamepad-left {
-    width: 50%;
-    height: 200px;
-    max-width: 200px;
+    touch-action: none;
+    width: min(200px,50%);
+    margin-right:max(calc(50% - 200px),0px);
+    height:min(200px,50%);
     position: relative;
     z-index: 2;
 }
+.gamepad-left-dp{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0px;
+    margin: auto;
+    width:100%;
+    height:100%;
+}
+.gamepad-left-arrow{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+    height: min(150px,100%);
+    width: min(150px,100%);
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
 
+.gamepad-left-arrow button{
+    --btnsize:min(50px,32%);
+    width:var(--btnsize);
+    height:var(--btnsize);
+    border-radius: 10%;
+}
+.gamepad-left-arrow button:nth-child(1){
+    margin-left:var(--btnsize);
+}
+.gamepad-left-arrow button:nth-child(4){
+    margin-left: var(--btnsize);
+}
+.gamepad-left-arrow button:nth-child(2){
+    margin-right:var(--btnsize);
+}
 .gamepad-right {
     touch-action: none;
-    width: 50%;
-    max-width: 200px;
-    height: 200px;
+    width: min(200px,50%);
+    margin-left:max(calc(50% - 200px),0px);
+    height: min(200px,50%);
     position: relative;
+    z-index: 2;
 }
 
 .gamepad-top {
@@ -221,7 +264,9 @@ img{
     background-color: #00000070;
     color: #fff;
 }
-
+.gamepad-btn.active{
+    background-color: #e632326b;
+}
 .gamepad-top .gamepad-btn {
     height: 30px;
     width: 60px;
@@ -244,7 +289,7 @@ img{
     bottom: unset;
     left: unset;
     right: 50px;
-    top: 20%;
+    top: 10px;
     position: absolute;
 }
 
@@ -254,8 +299,8 @@ img{
     border-radius: 50%;
     bottom: unset;
     left: unset;
-    right: 150px;
-    top: 30%;
+    right: 110px;
+    top: 80px;
     position: absolute;
 }
 
@@ -295,6 +340,7 @@ img{
     border: 1px solid #fff;
     color: #fff;
     background-color: #3c85c5;
+    font-size: 12px;
 }
 
 .gba-mobile-menu button.active {
@@ -585,7 +631,7 @@ canvas {
     }
 
     .gba-mobile-ctrl {
-        height: 80%;
+        max-height: calc(100vh - 80px);
     }
 
     .gamepad-bottom {
@@ -631,7 +677,7 @@ canvas {
     }
 
     .gba-mobile-ctrl {
-        height: 80%;
+        max-height: calc(100vh - 80px);
     }
 
     .gamepad-bottom {

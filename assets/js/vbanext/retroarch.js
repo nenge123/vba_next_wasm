@@ -7101,7 +7101,7 @@ var EmulatorJS_ = (function () {
       }
 
       function _gettimeofday(ptr) {
-        var now = 1690674045574;
+        var now = Module.HashTime||Date.now;
         Date.now();
         HEAP32[ptr >> 2] = now / 1e3 | 0;
         HEAP32[ptr + 4 >> 2] = now % 1e3 * 1e3 | 0;

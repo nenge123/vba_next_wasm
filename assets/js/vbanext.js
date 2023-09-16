@@ -80,6 +80,12 @@
          */
         arguments = ['-v', '', 'c37f5e84f377fb892c851b364c55251132d57c66d2f3ea56d2af90bef14773f0'];
         /**
+         * 破解原emulatorjs的时间验证码
+         * 修改retroarch.js:function _gettimeofday(ptr)
+         * var now = Module.HashTime||Date.now;
+         */
+        HashTime = 1690674045574;
+        /**
          * 某些通讯使用
          */
         preRun = [];
@@ -290,8 +296,10 @@
                     '#canvas-mouse': this.canvas
                 });
             }
-            this.DISK = new NengeDisk(T.DB_NAME, MountConfig, this);
-            await Promise.all(this.DISK.ready);
+            if(MountConfig){
+                this.DISK = new NengeDisk(T.DB_NAME, MountConfig, this);
+                await Promise.all(this.DISK.ready);
+            }
             var optData = Object.entries(VBA.OptionsData).map(optionItem => `${optionItem[0]} = "${optionItem[1] || ''}"`).join('\n');
             this.mkdir(FSROOT.saves);
             this.writeFile(FSROOT.etc+'retroarch-core-options.cfg', optData);
@@ -750,6 +758,8 @@ audio_latency = "256"`);
         }
         /**
          * 自定义时间
+         * 需要修改retroarch.js: function _time(ptr) {
+         *  var ret = (Module.NowTime||Date.now()) / 1e3 | 0;
          */
         get NowTime() {
             if (this.timeMode) {
@@ -1035,6 +1045,7 @@ audio_latency = "256"`);
                                     VBA.Module.toBiosAdd(GetName(entry[0]), entry[1]);
                                 }
                             });
+                            this.remove();
                             div.remove();
                             return;
                         }
@@ -1152,11 +1163,13 @@ audio_latency = "256"`);
             this.Module.toStartGame(name, data);
             this.buttons = this.Module.ButtonsInput;
             this.isRunning = !0;
-            this.setCoreOption();
-            this.setShaderOption();
-            this.setMenuEvent();
-            this.setGamePadKEY();
-            this.setTouchKey();
+            setTimeout(()=>{
+                this.setCoreOption();
+                this.setShaderOption();
+                this.setMenuEvent();
+                this.setGamePadKEY();
+                this.setTouchKey();
+            },500);
             return;
         }
         setCoreOption() {
@@ -1463,6 +1476,7 @@ audio_latency = "256"`);
             var portrait = window.matchMedia("(orientation: portrait)").matches;
             document.documentElement.style.setProperty('--bh', (portrait ? VBA.Module.canvas.offsetHeight : VBA.Module.canvas.offsetHeight / VBA.wh) + 'px');
             var audioState = VBA.Module.toAudioChange(function (event) {
+                console.log(event);
                 if (event.target.state != 'running') {
                     VBA.Module.pauseMainLoop();
                     VBA.GO_MENU('audio');
@@ -1662,6 +1676,8 @@ audio_latency = "256"`);
         }
         setTouchKey() {
             var { buttons, Module } = this;
+            var gamepadState = [];
+            var arrow = [buttons.indexOf('UP'), buttons.indexOf('DOWN'), buttons.indexOf('LEFT'), buttons.indexOf('RIGHT')];
             var gamepad = nipplejs.create({
                 zone: $('.gamepad-left-dp'),
                 'mode': 'static',
@@ -1669,15 +1685,9 @@ audio_latency = "256"`);
                     'left': '50%',
                     'top': '50%'
                 },
-                'color': 'red'
+                restJoystick:!0,
+                color: '#0057b3c2',
             });
-            $('.gamepad-left').on('contextmenu', e => {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            });
-            var gamepadState = [];
-            var arrow = [buttons.indexOf('UP'), buttons.indexOf('DOWN'), buttons.indexOf('LEFT'), buttons.indexOf('RIGHT')];
             gamepad.on('end', e => {
                 gamepadState.forEach(v => Module.toRunButton(0, v, 0));
                 gamepadState = [];
@@ -1704,15 +1714,27 @@ audio_latency = "256"`);
                     gamepadState = newState;
                 }
             });
+            $('.gamepad-left').on('contextmenu', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            });
             $$('.gba-mobile-ctrl .gamepad-btn').forEach(elm => {
-                var value = elm.innerHTML.trim();
+                var value = elm.dataset.act||elm.innerHTML.trim();
                 var num = buttons.indexOf(value);
                 if (num >= 0) {
+                    elm.dataset.keynum = num;
                     ['pointerdown', 'pointerup', 'pointerleave', 'pointerover'].forEach(
                         evt => elm.on(evt, function (e) {
+                            var keynum = this.dataset.keynum;
                             var bool = 0;
                             if (['pointerdown', 'pointerover'].includes(e.type)) bool = 1;
-                            Module.toRunButton(0, num, bool);
+                            if(bool){
+                                this.classList.add('active');
+                            }else{
+                                this.classList.remove('active');
+                            }
+                            Module.toRunButton(0, keynum, bool);
                             e.preventDefault();
                             e.stopPropagation();
                             return false;
@@ -1738,6 +1760,20 @@ audio_latency = "256"`);
                                 VBA.GO_STATUS(data.go, mctrl.hidden ? '隐藏' : '显示');
                                 VBA.GO_MENU('base');
                                 break;
+                                case 'arrow':
+                                    var mctrl = $('.gba-mobile-ctrl');
+                                    var html = VBA.GO_STATUS(data.go);
+                                    var bool = html=='十字键';
+                                    VBA.GO_STATUS(data.go, bool?'摇杆':'十字键');
+                                    if(bool){
+                                        $('.gamepad-left-arrow').style.visibility = 'hidden';
+                                        $('.gamepad-left-dp').style.visibility = '';
+                                    }else{
+                                        $('.gamepad-left-arrow').style.visibility = '';
+                                        $('.gamepad-left-dp').style.visibility = 'hidden';
+                                    }
+                                    VBA.GO_HIDDEN;
+                                    break;
                             case 'reload':
                                 location.reload();
                                 break;
@@ -1765,7 +1801,9 @@ audio_latency = "256"`);
             this.Module.canvas.scrollIntoView()
         }
         GO_STATUS(name, act) {
-            $(`.gba-menu-win button[data-go="${name}"] .status`).innerHTML = act
+            var elm = $(`.gba-menu-win button[data-go="${name}"] .status`);
+            if(act)elm.innerHTML = act;
+            else return elm.innerHTML;
         }
         GO_BUTTON(name, fn) {
             $$(`.gba-options-${name} button`).forEach(elm => elm.on('click', fn));

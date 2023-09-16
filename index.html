@@ -7,6 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="viewport" content="initial-scale=1,width=device-width, height=device-height">
+    <meta name="turbo-cache-control" content="no-preview">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>最终GBA模拟器</title>
     <link rel="apple-touch-icon" href="assets/images/gba2.png">
     <link rel="mainifest" href="mainifest.json">
@@ -15,8 +19,6 @@
 <body>
     <div class="welcome">
         <img src="assets/images/zan.jpg">
-        <p>全面翻新,与旧版不同,默认运行载入电子存档,而不是旧版的载入状态.不再用屎山代码,采用一条龙直写,欢迎在Github fork!</p>
-        <p>即时存档统一称为"状态",而普通存档称为电子存档.</p>
         <div class="wel-index">
             <div class="wel-btn">
                 <button class="wel-start-btn">运行游戏</button>
@@ -54,6 +56,8 @@
                 <p>没有游戏请导入手机中游戏.百度网盘的压缩文件请改名pdf用打开方式存储到手机,然后导入该pdf.</p>
             </div>
         </div>
+        <p>全面翻新,与旧版不同,默认运行载入电子存档,而不是旧版的载入状态.不再用屎山代码,采用一条龙直写,欢迎在Github fork!</p>
+        <p>即时存档统一称为"状态",而普通存档称为电子存档.</p>
     </div>
     <div class="gba-body" hidden>
         <canvas class="gba-pic" width="600" height="400"></canvas>
@@ -73,7 +77,13 @@
                     <button class="gamepad-btn">R</button>
                 </div>
                 <div class="gamepad-left">
-                    <div class="gamepad-left-dp"></div>
+                    <div class="gamepad-left-dp" style="visibility: hidden;"></div>
+                    <div class="gamepad-left-arrow">
+                        <button class="gamepad-btn" data-act="UP">↑</button>
+                        <button class="gamepad-btn" data-act="LEFT">←</button>
+                        <button class="gamepad-btn" data-act="RIGHT">→</button>
+                        <button class="gamepad-btn" data-act="DOWN">↓</button>
+                    </div>
                 </div>
                 <div class="gamepad-right">
                     <button class="gamepad-btn">A</button>
@@ -104,6 +114,7 @@
                     <button data-act="reload"><strong>重载:</strong><span>刷新页面</span></button>
                     <button data-go="videosize"><strong>画质:</strong><span class="status">默认720p</span></button>
                     <button data-act="pad" data-go="pad"><strong>隐藏触摸按钮:</strong><span class="status">显示</span></button>
+                    <button data-act="arrow" data-go="arrow"><strong>方向键切换:</strong><span class="status">十字键</span></button>
                     <button data-go="cheat"><strong>金手指:</strong><span class="status">未启用</span></button>
                     <button data-go="shaders"><strong>滤镜:</strong><span class="status">未启用</span></button>
                     <button data-go="ctrl"><strong>键位映射</strong><span>设置键盘或者手柄</span></button>
