@@ -263,9 +263,11 @@ img{
     border: 1px solid #fff;
     background-color: #00000070;
     color: #fff;
+    opacity: .4;
 }
 .gamepad-btn.active{
     background-color: #e632326b;
+    opacity: .8;
 }
 .gamepad-top .gamepad-btn {
     height: 30px;
@@ -645,6 +647,10 @@ canvas {
         border-right: 1px #fff solid;
         height: 100%;
     }
+    canvas.iphone{
+        width: 100% !important;
+        border: none !important;
+    }
 }
 
 @media screen and (orientation: portrait) {
@@ -724,15 +730,5 @@ canvas {
         width: auto;
         border: none;
         border-bottom: 1px #fff solid;
-    }
-}
-
-@media screen and (orientation: landscape) and (display-mode:fullscreen) {
-    canvas{
-        width: 100% !important;
-        height: 100% !important;
-        border: none !important;
-        max-width: unset !important;
-        max-height: unset !important;
     }
 }

@@ -848,7 +848,8 @@ audio_latency = "256"`);
             }
             if(this.isIPhone){
                 this.videoSize = 480;
-                this.GO_STATUS('videosize','480P')
+                this.GO_STATUS('videosize','480P');
+                //$('canvas').classList.add('iphone');
             }
             if (document.readyState == 'complete') return T.welcome();
             document.addEventListener('DOMContentLoaded', e => {
@@ -1675,6 +1676,12 @@ audio_latency = "256"`);
 
         }
         setTouchKey() {
+            if(document.ontouchstart===undefined){
+                $('.gba-mobile-ctrl').hidden = !0;
+                $('.gba-options-base button[data-act="pad"]').hidden = !0;
+                $('.gba-options-base button[data-act="arrow"]').hidden = !0;
+                return ;
+            }
             var { buttons, Module } = this;
             var gamepadState = [];
             var arrow = [buttons.indexOf('UP'), buttons.indexOf('DOWN'), buttons.indexOf('LEFT'), buttons.indexOf('RIGHT')];
@@ -1722,27 +1729,54 @@ audio_latency = "256"`);
             $$('.gba-mobile-ctrl .gamepad-btn').forEach(elm => {
                 var value = elm.dataset.act||elm.innerHTML.trim();
                 var num = buttons.indexOf(value);
+                elm.dataset.keyname = value;
                 if (num >= 0) {
                     elm.dataset.keynum = num;
-                    ['pointerdown', 'pointerup', 'pointerleave', 'pointerover'].forEach(
-                        evt => elm.on(evt, function (e) {
-                            var keynum = this.dataset.keynum;
-                            var bool = 0;
-                            if (['pointerdown', 'pointerover'].includes(e.type)) bool = 1;
-                            if(bool){
-                                this.classList.add('active');
-                            }else{
-                                this.classList.remove('active');
-                            }
-                            Module.toRunButton(0, keynum, bool);
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return false;
-
-                        })
-                    );
                 }
             });
+            var touchList = {};
+            function getKeyValue(elm){
+                return (elm instanceof Element)&&elm.dataset&&parseInt(elm.dataset.keynum);
+            }
+            function touchEvent(e){
+                var newlist=[];
+                var arrowlist = touchList[this.dataset.id]||[];
+                if (e.type == 'touchstart') {
+                    var keynum = getKeyValue(e.target);
+                    if(keynum!=undefined){
+                        newlist.push(keynum);
+                    }
+                } else if (e.touches) {
+                    if (e.touches.length) {
+                        newlist = ToArr(e.touches).map(entry => getKeyValue(document.elementFromPoint(entry.pageX, entry.pageY)))||[];
+                    }
+                }
+                newlist = newlist.filter(v=>v!=undefined&&!isNaN(v));
+                if (newlist != arrowlist.join(',')) {
+                    arrowlist.forEach(v => {
+                        if (!newlist.includes(v)) {
+                            Module.toRunButton(0, v, 0);
+                            $('.gamepad-btn[data-keynum="'+v+'"]').classList.remove('active');
+                        }
+                    });
+                    newlist.forEach(v => {
+                        Module.toRunButton(0, v, 1);
+                        $('.gamepad-btn[data-keynum="'+v+'"]').classList.add('active');
+                    });
+                    touchList[this.dataset.id] = newlist;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            $('.gamepad-left-arrow').dataset.id = 'arrow';
+            ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(v=>$('.gamepad-left-arrow').on(v,touchEvent));
+            $('.gamepad-right').dataset.id = 'ab';
+            ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(v=>$('.gamepad-right').on(v,touchEvent));
+            $('.gamepad-bottom').dataset.id = 'ss';
+            ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(v=>$('.gamepad-bottom').on(v,touchEvent));
+            $('.gamepad-top').dataset.id = 'lr';
+            ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(v=>$('.gamepad-top').on(v,touchEvent));
             if (!T.mobile) {
                 $('button[data-act="pad"]').click();
             }
