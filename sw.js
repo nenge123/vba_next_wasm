@@ -2,26 +2,26 @@
 var CACHE_NAME = 'GBA-WASM';
 var CACHE_PATH = self.registration.scope;
 var CACHE_LIST = [
-    "./",
-    "./assets/images/zan.jpg",
-    "./assets/css/style.css",
-    "./assets/js/common.js",
-    "./assets/js/NengeDisk.js",
-    "./assets/js/gamepad.js",
-    "./assets/js/nipplejs.js",
-    "./assets/js/vbanext.js",
-    "./assets/images/gba2.png",
-    "./assets/images/zan.jpg"
-];
+    "",
+    "assets/css/style.css",
+    "assets/js/common.js",
+    "assets/js/NengeDisk.js",
+    "assets/js/gamepad.js",
+    "assets/js/nipplejs.js",
+    "assets/js/vbanext.js",
+    "assets/images/gba2.png",
+    "assets/images/zan.jpg"
+].map(v => CACHE_PATH + v);
 var isLocal = location.host == '127.0.0.1';
-var version = '2023/09/15 23:30';
+var version = '2023/09/17 07:48';
 var myIDB;
+var PromiseList = {};
 function Check(obj, k) {
     for (let a in k) if (obj[a] != k[a]) return !1;
     return !0;
 }
 function getName(url) {
-    return url.split('/').pop().split('?').split('#')[0];
+    return (url || '').split('/').pop().split('?')[0].split('#')[0];
 }
 function getExt(url) {
     return getName(url).split('.').pop();
@@ -75,18 +75,11 @@ function postMessage(str) {
 }
 function getResponse(url, action) {
     let id = (Math.random() * Math.random() + '').slice(2);
-    let message = { url, action, id };
+    postMessage({ url, action, id });
     return new Promise(back => {
-        var func = e => {
-            console.log(e);
-            var data = e.data;
-            if (Check(data, message)) {
-                removeEventListener('message', func);
-                return back(data.result);
-            }
-        };
-        addEventListener('message', func);
-        postMessage(message);
+        PromiseList[id] = function (data) {
+            back(data.result);
+        }
     });
 }
 function LoadDB(name) {
@@ -177,12 +170,12 @@ function saveCaches(cache_name, result) {
 Object.entries({
     async install(event) {
         console.log('serviceWorker install');
-        if (navigator.onLine && !isLocal) {
+        if (!isLocal && navigator.onLine) {
             return event.waitUntil(new Promise(async re => {
                 var myCACHE = await caches.open(CACHE_NAME);
                 await Promise.all(CACHE_LIST.map(async v => {
-                    var re = await fetch(v, { cache: 'no-cache', mode: 'same-origin', redirect: 'follow' });
-                    myCACHE.put(re.url, re.clone());
+                    var re = await fetch(v + '?' + Date.now());
+                    myCACHE.put(v, re);
                 }));
                 re(postMessage({ action: 'pwa_install' }));
 
@@ -193,8 +186,8 @@ Object.entries({
     },
     activate(event) {
         console.log('serviceWorker activate');
-        !myIDB && postMessage({ action: 'GETDBNAME' });
-        postMessage({ action: 'pwa_activate' });
+        //!myIDB && postMessage({ action: 'GETDBNAME' });
+        postMessage({ action: 'pwa_activate', result: event.data });
         return self.skipWaiting(); //跳过等待
     },
     fetch(event) {
@@ -202,11 +195,11 @@ Object.entries({
          * 返回数据
          */
         var response;
-        if (!isLocal&&event.request.method == 'GET') {
-            /**
-             * 请求地址
-             */
-            var url = event.request.url;
+        /**
+         * 请求地址
+         */
+        var url = event.request.url;
+        if (event.request.method == 'GET') {
             /**
              * 本地地址
              */
@@ -214,52 +207,51 @@ Object.entries({
             /**
              * 是否缓存列表文件
              */
-            var isCache = urlLocal && CACHE_LIST.includes(url.replace(CACHE_PATH, './'));
+            var isCache = urlLocal && CACHE_LIST.includes(url);
             /**
              * 是否需要前端解压的虚假地址
              */
-            var isPack = urlLocal && /pack=/i.test(url);
+            var isPack = urlLocal && /(pack=|\.wasm)/i.test(url);
             /**
              * 是否CDN
              */
             var isCDN = !urlLocal && /(cdn|code)/i.test(url);
-            if (isCDN) {
-                if (location.protocol == 'http:') url = url.replace('https:', location.protocol);
-            }
             if (isCache || isPack || isCDN) {
                 //拦截请求 event.request 一个请求对象
                 return event.respondWith(new Promise(async resolve => {
+                    var URL_NAME = getName(url);
                     var DB = await caches.open(CACHE_NAME);
                     response = await DB.match(event.request);
-                    if (navigator.onLine) {
-                        //联网状态
-                        /***
-                        if(response){
-                            var headers = getHeaders(response.headers);
-                            var time = headers['date'];
-                            if(time&&Date.now() - Date.parse(time)>24*3600){
-                                var response =  await fetch(event.request);
-                                if(response){
-                                    DB.put(event.request, response.clone());
-                                }
-                            }
-                        }
-                        */
-                        if (!response) {
-                            response = await fetch(event.request);
-                            if (!response || response.status != 200) {
-                                if (isPack) {
-                                    //分析本地虚假地址 进行虚假worker缓存
-                                    action = url.match(/pack=([^&]+)/);
-                                    if (action) {
-                                        if (await getResponse(url, action[1])) {
-                                            return resolve(DB.match(event.request));
-                                        }
+                    if (!response) {
+                        if (navigator.onLine) {
+                            if (isPack) {
+                                //分析本地虚假地址 进行虚假worker缓存
+                                action = url.match(/pack=([^&]+)/);
+                                if (action && action[1]) {
+                                    var result = await getResponse(url, action[1]);
+                                    if (result) {
+                                        return resolve(await DB.match(event.request));
                                     }
                                 }
                             }
-                            if (response && response.status == 200 && (isCache || isCDN)) {
-                                DB.put(event.request, response.clone());
+                            //联网状态
+                            /***
+                            if(response){
+                                var headers = getHeaders(response.headers);
+                                var time = headers['date'];
+                                if(time&&Date.now() - Date.parse(time)>24*3600){
+                                    var response =  await fetch(event.request);
+                                    if(response){
+                                        DB.put(event.request, response.clone());
+                                    }
+                                }
+                            }
+                            */
+                            if (!response) {
+                                response = await fetch(event.request);
+                                if (!isLocal && response && response.status == 200 && (isCache || isCDN)) {
+                                    DB.put(event.request, response.clone());
+                                }
                             }
                         }
                     }
@@ -270,15 +262,24 @@ Object.entries({
         }
         return response;
     },
+    notificationclick(event) {
+        console.log("On notification click: ", event.notification.tag);
+    },
+    push(event) {
+        console.log("On notification click: ", event.data);
+    },
     message(event) {
         let data = event.data;
         if (data && data.constructor === Object) {
             if (isLocal) console.log(data);
-            var { action, result } = data;
+            var { action, result, id } = data;
             if (action == 'WOKERDBNAME') {
                 !myIDB && (myIDB = LoadDB(result));
             } else if (action == 'WRITECACHE') {
                 saveCaches(data.cachename || CACHE_NAME, result);
+            } else if (id && PromiseList[id]) {
+                PromiseList[id](data);
+                delete PromiseList[id];
             }
         }
     }

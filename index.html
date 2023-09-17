@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="viewport" content="initial-scale=1,width=device-width, height=device-height">
     <meta name="turbo-cache-control" content="no-preview">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>最终GBA模拟器</title>
@@ -19,7 +19,7 @@
 <body>
     <div class="welcome">
         <img src="assets/images/zan.jpg">
-        <div class="wel-index">
+        <div class="wel-index" hidden>
             <div class="wel-btn">
                 <button class="wel-start-btn">运行游戏</button>
                 <button data-db="rooms">管理游戏</button>
@@ -32,7 +32,7 @@
             <div class="wel-core-mod">
                 <h1>设置启动核心(默认mGBA)</h1>
                 <p>不同核心直接存在差异,例如水晶版切换核心会产生性别转换.因此非必要,修改后不要更改!vbanext仅仅支持gba,mgba支持所有,gb仅仅支持gbc/gb游戏.</p>
-                <p class="warning">gb和mgba的存档和状态不兼容的!<br>加载核心下载过慢!<br>请关闭并打开手游加速器加速外服游戏再打开.</p>
+                <p class="warning">gb和mgba的存档和状态不兼容的!<br>Github加载核心下载过慢!<br>请关闭并打开手游加速器加速外服游戏再打开.</p>
                 <button data-mod="vbanext">vbanext(原版本)</button>
                 <button data-mod="mgba">mgba</button>
                 <button data-mod="gb">gb</button>
@@ -71,7 +71,7 @@
                 <button class="gba-mobile-saveState" data-act="saveState">即存</button>
                 <button class="gba-mobile-fastForward" data-act="fastForward">加速</button>
             </div>
-            <div class="gba-mobile-ctrl">
+            <div class="gba-mobile-ctrl" hidden>
                 <div class="gamepad-top">
                     <button class="gamepad-btn">L</button>
                     <button class="gamepad-btn">R</button>

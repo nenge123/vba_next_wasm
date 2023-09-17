@@ -459,58 +459,15 @@
             });
             return await zipFileWriter.getData();
         },
-        setServiceWorker() {
-            var {
-                serviceWorker
-            } = navigator;
-            if (!serviceWorker.controller) return;
-            T.sw_install = !0;
-            T.on(T.sw, 'statechange', e => {
-                console.log(e);
-            });
-            T.on(T.sw, 'error', e => {
-                console.log(e);
-            });
-            T.on(navigator.serviceWorker, "message", async (event) => {
-                let data = event.data;
-                if (I.obj(data)) {
-                    let action = data.action;
-                    if (action) {
-                        if (I.str(action)) {
-                            if (action == 'GETDBNAME') {
-                                return T.docload(()=>{
-                                    T.PostMessage({
-                                    action: 'WOKERDBNAME',
-                                    result: T.DB_NAME
-                                })})
-                            }
-                            if(T.action[action]){
-                                let result = await T.CF(action, data);
-                                if (data.id) {
-                                    data.result = result;
-                                    T.PostMessage(data);
-                                } else {
-                                    T.PostMessage(result);
-                                }
-                            }else{
-                                console.log(data);
-                            }
-                        } else if (I.array(action)) {
-                            I.FM(action, (v) => [
-                                v, T[v] || win[v]
-                            ]);
-                        }
-                    }
-                }
-            });
-
-        },
         PostMessage(str){
             var sw = this.sw;
             return sw&&sw.postMessage(str);
         },
         async openServiceWorker(file) {
-            navigator.serviceWorker.register(file).then(e => !T.sw_install && T.setServiceWorker())
+            navigator.serviceWorker.register(file).then(e =>{
+                e.active&&(e.active.onstatechange = e =>T.CF('pwa_statechange',e));
+                e.onupdatefound = e=>T.CF('pwa_updatefound',e);
+            })
         },
         clearWorker(js) {
             navigator.serviceWorker.getRegistrations().then(sws => sws.forEach(sw => {
@@ -921,6 +878,8 @@
     }
     class CustomFetch {
         ispack = /(zip|rar|7z)$/;
+        unpackText = 'unpack:';
+        downText = 'down:';
         constructor(ARG) {
             if (I.str(ARG))
                 this.url = ARG;
@@ -964,7 +923,7 @@
                             contents: contents,
                             Name: filename,
                             ext: fileext,
-                            onprogress: this.progress
+                            onprogress:(current,total,name)=>this.onprogress(current,total,this.unpackText+name)
                         };
                         if (password) opt.password = password;
                         result = await (new Decompress(opt)).done();
@@ -1067,7 +1026,7 @@
             if (version) option.version = version;
             if (I.u8buf(contents) || I.blob(contents)) {
                 if (unpack) {
-                    var undata = await this.onUpack(contents, option, key, Store);
+                    var undata = await this.toPack(contents, option, key, Store);
                     if (undata) return callback(undata);
                 }
             }
@@ -1079,7 +1038,10 @@
                 return callback(contents);
             }
         }
-        onUpack(contents, option, key, Store) {
+        onprogress(current,total,name){
+            this.progress&&this.progress(name+'('+(total?I.PER(current,total):current)+')',current,total);
+        }
+        toPack(contents, option, key, Store) {
             return I.Async(async callback => {
                 var fileext = await F.CheckExt(contents);
                 if (this.ispack.test(fileext)) {
@@ -1088,7 +1050,7 @@
                         Name: option.filename,
                         ext: fileext,
                         password: this.password,
-                        onprogress: this.progress
+                        onprogress:(current,total,name)=>this.onprogress(current,total,this.unpackText+name)
                     });
                     var filecontent = await decompress.done();
                     var maxLength = 0;
@@ -1179,17 +1141,15 @@
                     speedsize = value.length;
                     havesize += speedsize;
                 }
-                if (this.progress) {
-                    let statustext = " ";
-                    if (length && havesize <= length)
-                        statustext = I.PER(havesize, length);
-                    else
-                        statustext = `(${(havesize / 1024).toFixed(1)
-                            }KB)`;
-
-                    /* 下载进度*/
-                    this.progress(`${filename || ''} ${statustext}`, havesize, length, speedsize);
+                let current = "";
+                if (length && havesize <= length){
+                    current = havesize;
+                }else{
+                    current = `${(havesize / 1024).toFixed(1)}KB`;
+                    length = 0;
                 }
+                /* 下载进度*/
+                this.onprogress(current, length,this.downText+filename);
                 chunks.push(value);
             }
             return I.File(chunks, filename, type, headers["last-modified"]);
@@ -1253,7 +1213,7 @@
             return fn ? fn(result) : result;
         }
         progress(current, total, name) {
-            this.onprogress && this.onprogress(`unpack(${I.PER(current, total)})${name || ''}`);
+            this.onprogress && this.onprogress(current, total, name);
         }
         async extractor(ext) {
             return I.Async(async re => {
@@ -1389,9 +1349,7 @@
 
         }
         async getData(entry, password) {
-            return entry.getData(new zip.Uint8ArrayWriter(), {
-                password
-            });
+            return entry.getData(new zip.Uint8ArrayWriter(), {password,onprogress:(current,total)=>this.progress(current,total,entry.filename)});
         }
         async getEncrypted(entry, password) {
             var buf = await I.Async((re) => {
@@ -1930,7 +1888,43 @@
                     }
                 }
             });
-            T.setServiceWorker();
+            serviceWorker.onerror = function(e){
+                T.clearWorker();
+                T.CF('pwa_error',e);
+            };
+            serviceWorker.onmessage=async function(event){
+                let data = event.data;
+                if (I.obj(data)) {
+                    let action = data.action;
+                    if (action) {
+                        if (I.str(action)) {
+                            if (action == 'GETDBNAME') {
+                                return T.docload(()=>{
+                                    T.PostMessage({
+                                    action: 'WOKERDBNAME',
+                                    result: T.DB_NAME
+                                })})
+                            }
+                            if(T.action[action]){
+                                let result = await T.CF(action, data);
+                                if (data.id) {
+                                    data.result = result;
+                                    T.PostMessage(data);
+                                } else {
+                                    T.PostMessage(result);
+                                }
+                            }
+                        } else if (I.array(action)) {
+                            I.FM(action, (v) => [
+                                v, T[v] || win[v]
+                            ]);
+                        }else{
+                            console.log(data);
+                        }
+                    }
+                }
+            };
+            serviceWorker.ready.then(sw=>sw&&(sw.onstatechange = e =>T.CF('pwa_statechange',e)));
         }
         /*
         let ehtml = document.documentElement;

@@ -4,7 +4,8 @@
     var T = Nenge,
         I = T.I,
         F = T.F,
-        JSpath = document.currentScript.src.split('/').slice(0, -1).join('/') + '/';
+        JSpath = document.currentScript.src.split('/').slice(0, -1).join('/') + '/',
+        isLocal = location.host == '127.0.0.1';
     console.log(JSpath);
     T.DB_NAME = 'GBA-WASM';
     Object.assign(T.DB_STORE_MAP, {
@@ -227,38 +228,6 @@
             var asmJS = JSpath + this.corename + '/retroarch.js';
             if (!this.isLocal) {
                 asmJS = JSpath + this.corename + '/retroarch.min.js?pack=getcore';
-                Object.assign(T.action, {
-                    /**
-                     * PWA回调函数 pack=getcore
-                     * @param {json} data worker消息
-                     * @returns {boolean}
-                     */
-                    getcore: async (data) => {
-                        console.log(data);
-                        var files = await T.FetchItem({
-                            url: JSpath + this.corename + '/' + this.corename + '.zip',
-                            unpack: !0,
-                            progress
-                        });
-                        var CACHE = await caches.open('GBA-WASM');
-                        await Promise.all(ToArr(files).map(entry => {
-                            var ext = GetExt(entry[0]);
-                            var mime = "application/" + (ext == "js" ? "javascript" : "wasm");
-                            var path = ext == 'js' ? asmJS : asmJS.replace(/(\.min)?\.js.+$/, '.wasm');
-                            var file = new File([entry[1]], entry[0], { type: mime });
-                            var reponse = new Response(
-                                file,
-                                {
-                                    headers: {
-                                        "Content-Type": file.type, "Content-Length": file.size,
-                                        'Date': new Date().toGMTString()
-                                    }
-                                });
-                            return CACHE.put(path, reponse);
-                        }));
-                        return !0;
-                    }
-                });
             }
             await T.addJS(asmJS);
         }
@@ -271,7 +240,9 @@
                 url: JSpath + this.corename + '/' + this.corename + '.zip',
                 unpack: !0,
                 store: 'libjs',
-                progress
+                progress,
+                unpackText:'解压:',
+                downText:'下载:'
             });
             this.wasmBinary = files['retroarch.wasm'];
             await T.addJS(files['retroarch.min.js']);
@@ -932,17 +903,12 @@ audio_latency = "256"`);
                 var gamelist = $('.wel-game-list');
                 var CorePath;
                 var STORE, images;
+                progressElm.innerHTML = '请稍等!';
+                progressElm.classList.add('download-progress');
                 progressElm.style.cssText='color: #3643e9;font-size: 1rem;font-weight: bold;text-shadow: 2px 2px 3px #8b7b7b;';
                 gamelist.appendChild(progressElm);
                 if (VBA.isPWA) {
                     if (!navigator.serviceWorker.controller) {
-                        /**
-                         * 回调函数 表示PWA已经激活
-                         * @returns 
-                         */
-                        T.action['pwa_activate'] = function () {
-                            location.reload();
-                        }
                         progressElm.innerHTML = 'serviceWorker 未完全加载!稍后替你刷新页面';
                         return;
                     }
@@ -1038,7 +1004,9 @@ audio_latency = "256"`);
                                 unpack: !0,
                                 progress(e) {
                                     div.innerHTML = e;
-                                }
+                                },
+                                unpackText:'解压:',
+                                downText:'下载:'
                             }), entry => {
                                 if (elmdo == 'shaders2') {
                                     VBA.Module.toShaderAdd(GetName(entry[0]), entry[1]);
@@ -1130,7 +1098,7 @@ audio_latency = "256"`);
             );
             this.corename = localStorage.getItem('gba_core_mod') || 'mgba';
             $('.wel-core-mod button[data-mod="' + this.corename + '"]').classList.add('active');
-
+            $('.wel-index').hidden = !1;
         }
         WriteRooms(name, data, gamelist) {
             var VBA = this;
@@ -1160,11 +1128,11 @@ audio_latency = "256"`);
             clearImages();
             $('.welcome').remove();
             $('.gba-body').hidden = !1;
-            $('.gba-ui').hidden = !1;
             this.Module.toStartGame(name, data);
             this.buttons = this.Module.ButtonsInput;
             this.isRunning = !0;
             setTimeout(()=>{
+                $('.gba-ui').hidden = !1;
                 this.setCoreOption();
                 this.setShaderOption();
                 this.setMenuEvent();
@@ -1682,6 +1650,7 @@ audio_latency = "256"`);
                 $('.gba-options-base button[data-act="arrow"]').hidden = !0;
                 return ;
             }
+            $('.gba-mobile-ctrl').hidden = !1;
             var { buttons, Module } = this;
             var gamepadState = [];
             var arrow = [buttons.indexOf('UP'), buttons.indexOf('DOWN'), buttons.indexOf('LEFT'), buttons.indexOf('RIGHT')];
@@ -1870,6 +1839,7 @@ audio_latency = "256"`);
             var input = document.createElement('input');
             input.type = 'file';
             input.onchange = e => {
+                alert(e.target.files[0]);
                 e.target.files.length && fn && fn(e.target.files);
                 input.remove();
             }
@@ -1916,6 +1886,62 @@ audio_latency = "256"`);
     var isstandalone = navigator.standalone;
     if (isstandalone && isIPhone || !isIPhone) {
         if (navigator.serviceWorker) {
+            Object.assign(T.action,{
+                /**
+                 * 回调函数 表示PWA已经激活
+                 * @returns 
+                 */
+                pwa_activate(d){
+                    console.log(d);
+                    location.reload();
+                },
+                pwa_error(d){
+                    console.log(d);
+                },
+                pwa_updatefound(d){
+                    console.log(d);
+                },
+                pwa_statechange(d){
+                    console.log(d);
+                },
+                /**
+                 * PWA回调函数 pack=getcore
+                 * @param {json} data worker消息
+                 * @returns {boolean}
+                 */
+                async getcore(data){
+                    var {url} = data;
+                    var Module = VBA.Module;
+                    var files = await T.FetchItem({
+                        url: JSpath + Module.corename + '/' + Module.corename + '.zip',
+                        unpack: !0,
+                        progress:(e)=>{
+                            if(isLocal)console.log(e);
+                            $('.download-progress').innerHTML = e;
+                        },
+                        unpackText:'解压:',
+                        downText:'下载:'
+                    });
+                    var CACHE = await caches.open('GBA-WASM');
+                    var filename = GetName(url);
+                    await Promise.all(ToArr(files).map(entry => {
+                        var ext = GetExt(entry[0]);
+                        var mime = "application/" + (ext == "js" ? "javascript" : "wasm");
+                        var path = ext == 'js' ? url : url.replace(/(\.min)?\.js.+$/, '.wasm');
+                        var file = new File([entry[1]], entry[0], { type: mime });
+                        var reponse = new Response(
+                            file,
+                            {
+                                headers: {
+                                    "Content-Type": file.type, "Content-Length": file.size,
+                                    'Date': new Date().toGMTString()
+                                }
+                            });
+                        return CACHE.put(path, reponse);
+                    }));
+                    return !0;
+                }
+            });
             isPWA = !0;
             T.openServiceWorker('sw.js');
         }
