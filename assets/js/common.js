@@ -1,9 +1,7 @@
 (function (global, factory) {
-    typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : ((global = typeof globalThis !== "undefined" ? globalThis : global || self), factory((global.T = {})));
+    typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : ((global = typeof globalThis !== "undefined" ? globalThis : global || self), factory((global)));
 })(this, function (exports) {
     "use strict";
-    const T = exports;
-    const win = typeof globalThis !== "undefined" ? globalThis : this || self;
     const {
         Array,
         Object,
@@ -52,9 +50,10 @@
         NodeList,
         KeyboardEvent,
         StyleSheet,
-        console
-    } = win;
-    var Nenge = {
+        console,
+        EventTarget
+    } = exports;
+    const T = {
         version: 1,
         DB_NAME: "XIUNOBBS",
         DB_STORE_MAP: {
@@ -90,11 +89,7 @@
             return T.getStore(dbName, opt).table(table);
         },
         async FetchItem(ARG) {
-            return I.Async(async re => {
-                var FI = new CustomFetch(ARG);
-                if (!ARG.success) FI.done(re);
-                else re();
-            });
+            return new CustomFetch(ARG).result;
         },
         ajax(ARG) {
             ARG = I.assign({
@@ -114,8 +109,8 @@
                         ARG.error && ARG.error.apply(request, a);
                         resolve(null);
                     },
-                    heads = I.NN(document.head);
-                T.on(request, evt[1], (event) => {
+                    heads = 'head';
+                    request.on(evt[1], (event) => {
                     let readyState = request.readyState;
                     if (readyState === 2) {
                         ResHeaders = F.ajaxHeader(request);
@@ -146,9 +141,9 @@
                         }
                     }
                 });
-                I.func(ARG[evt[0]]) && T.on(request, evt[0], (e) => I.progress(ARG[evt[0]], "", e.loaded, e.total, e));
-                I.func(ARG.postProgress) && T.on(request.upload, evt[0], (e) => I.progress(ARG.postProgress, "", e.loaded, e.total, e));
-                ARG.upload && I.toArr(ARG.upload, (v) => T.on(request.upload, v[0], v[1]));
+                I.func(ARG[evt[0]]) && request.on(evt[0], (e) => I.progress(ARG[evt[0]], "", e.loaded, e.total, e));
+                I.func(ARG.postProgress) &&request.upload.on(evt[0], (e) => I.progress(ARG.postProgress, "", e.loaded, e.total, e));
+                ARG.upload && I.toArr(ARG.upload, (v) =>request.upload.on(v[0], v[1]));
                 let formData,
                     headers = ARG.headers || {};
                 if (ARG.overType)
@@ -257,13 +252,10 @@
             return await T.addJS(await F.getLibjs(name, progress, version, decode, Filter), null, F.getExt(name) == "css");
         },
         async unFile(u8, fn, ARG) {
-            return I.Async(re => {
-                new Decompress(Object.assign(ARG || {}, {
-                    contents: u8,
-                    onprogress: fn
-                })).done(re);
-
-            });
+            return new Decompress(Object.assign(ARG || {}, {
+                contents: u8,
+                onprogress: fn
+            })).result;
         },
         customElement(myelement) {
             !customElements.get(myelement) && customElements.define(myelement, CustomElement);
@@ -333,19 +325,19 @@
         },
         on(elm, evt, fun, opt, cap) {
             elm = T.$(elm);
-            evt.split(/\s+/).forEach((v) => I.on(elm, v, fun, opt === false ? {
+            evt.split(/\s+/).forEach((v) => elm.on(v, fun, opt === false ? {
                 passive: false
             } : opt, cap));
             return elm;
         },
         un(elm, evt, fun, opt, cap) {
             elm = T.$(elm);
-            evt.split(/\s+/).forEach((v) => I.un(elm, v, fun, opt === false ? {
+            evt.split(/\s+/).forEach((v) => elm.un(v, fun, opt === false ? {
                 passive: false
             } : opt, cap));
             return elm;
         },
-        once: (elm, evt, fun, cap) => T.on(elm, evt, fun, {
+        once: (elm, evt, fun, cap) => elm.once(evt, fun, {
             passive: false,
             once: true
         }, cap),
@@ -353,7 +345,7 @@
             if (document.readyState != T.readyState)
                 return f && f.call(T);
 
-            T.once(document, "DOMContentLoaded", f);
+            document.once("DOMContentLoaded", f);
         },
         $: (e, f) => e ? (I.str(e) ? I.$(e, f) : I.func(e) ? T.docload(e) : e) : undefined,
         $$: (e, f) => I.$$(e, f),
@@ -425,7 +417,7 @@
         MediaQuery(query, fn) {
             if (matchMedia) {
                 let m = matchMedia(query);
-                T.on(m, "change", (e) => fn(e.matches, e));
+                m.on("change", (e) => fn(e.matches, e));
                 fn(m.matches);
             }
         },
@@ -459,14 +451,14 @@
             });
             return await zipFileWriter.getData();
         },
-        PostMessage(str){
+        PostMessage(str) {
             var sw = this.sw;
-            return sw&&sw.postMessage(str);
+            return sw && sw.postMessage(str);
         },
         async openServiceWorker(file) {
-            navigator.serviceWorker.register(file).then(e =>{
-                e.active&&(e.active.onstatechange = e =>T.CF('pwa_statechange',e));
-                e.onupdatefound = e=>T.CF('pwa_updatefound',e);
+            navigator.serviceWorker.register(file).then(e => {
+                e.active && (e.active.onstatechange = e => T.CF('pwa_statechange', e));
+                e.onupdatefound = e => T.CF('pwa_updatefound', e);
             })
         },
         clearWorker(js) {
@@ -526,10 +518,10 @@
             var IDB = this;
             return I.Async((resolve, reject) => {
                 let req = indexedDB.open(IDB.name, IDB.version);
-                T.once(req, "error", async (err) => {
+                req.once("error", async (err) => {
                     throw err;
                 });
-                T.once(req, "upgradeneeded", upgrad || (e => {
+                req.once("upgradeneeded", upgrad || (e => {
                     let db = e.target.result;
                     I.toArr(IDB.config, (entry) => {
                         var [table, opt] = entry;
@@ -546,7 +538,7 @@
                         }
                     });
                 }));
-                T.once(req, evtname[0], async (e) => {
+                req.once(evtname[0], async (e) => {
                     let db = e.target.result;
                     IDB.tables = I.toArr(db.objectStoreNames);
                     IDB.version = db.version + 1;
@@ -639,7 +631,7 @@
             return this.success(request.put(data, name));
         }
         success(request, fn) {
-            return I.Async((resolve) => T.on(request, evtname[0], (e) => {
+            return I.Async((resolve) => request.on(evtname[0], (e) => {
                 var result = request.result;
                 fn ? fn(resolve, result) : resolve(result);
             }));
@@ -876,18 +868,33 @@
             return this.getCursor(request.openKeyCursor(query, direction), fn);
         }
     }
-    class CustomFetch {
+    class CustomFetch extends EventTarget {
         ispack = /(zip|rar|7z)$/;
         unpackText = 'unpack:';
         downText = 'down:';
         constructor(ARG) {
+            super();
             if (I.str(ARG))
                 this.url = ARG;
             else
                 Object.assign(this, ARG);
-            if (this.success) this.done(this.success);
+            this.once('error', function (e) {
+                this.error && this.error(e.detail,e);
+            });
+            this.on('progress', function (e) {
+                var { current, total, name } = e.detail;
+                this.progress && this.progress(name + '(' + (total ? I.PER(current, total) : current) + ')', current, total);
+            });
+            this.result = new Promise(re => {
+                this.once('success', function (e) {
+                    var { result, headers } = e.detail;
+                    re(result);
+                    this.success && this.success(result, headers)
+                })
+            });
+            this.onsend();
         }
-        async done(fn) {
+        async onsend() {
             var CT = this,
                 contents,
                 headers, {
@@ -902,12 +909,11 @@
                     onLine,
                     option,
                     version,
-                    error,
                     ispack
                 } = CT;
             var urlname = F.getname(url) || "index.html";
             var callback = result => {
-                return I.func(fn) ? fn(result, headers) : result;
+                this.onsuccess(result, headers);
             };
             var callresult = async () => {
                 if (result && result.contents) {
@@ -923,20 +929,16 @@
                             contents: contents,
                             Name: filename,
                             ext: fileext,
-                            onprogress:(current,total,name)=>this.onprogress(current,total,this.unpackText+name)
+                            onprogress: (current, total, name) => this.onprogress(current, total, this.unpackText + name)
                         };
                         if (password) opt.password = password;
-                        result = await (new Decompress(opt)).done();
+                        result = await new Decompress(opt).result;
 
                     } else
                         result = contents;
 
                 }
                 return callback(result);
-            };
-            var onerror = (message) => {
-                error && error(message, headers);
-                return I.func(fn) ? fn() : undefined;
             };
             key = key || urlname;
             filename = filename || urlname;
@@ -955,7 +957,6 @@
             var response = await CT.response;
             if (I.nil(response) == undefined)
                 return callresult(result);
-
             headers = F.FilterHeader(I.toObj(response.headers) || {});
             if (!headers.filename)
                 headers.filename = filename;
@@ -979,7 +980,7 @@
                 status,
                 statusText
             });
-            if (type == I.NN(document.head)) {
+            if (type == 'head') {
                 cancel(response);
                 return callback(headers);
             }
@@ -991,12 +992,12 @@
                 result = undefined;
             }
             if (response.status != 200) {
-                if (filetype == F.getMime(texts[1])) {
-                    headers.result = await response.json();
+                if (filetype == F.getMime(T.ts[1])) {
+                    result = await response.json();
                 } else {
                     CT.cancel(response);
                 }
-                return onerror(statusText, headers);
+                return this.dispatch('error', { message: statusText, headers,result});
             }
             contents = await CT.steam(response, headers);
             filesize = contents.size;
@@ -1026,8 +1027,7 @@
             if (version) option.version = version;
             if (I.u8buf(contents) || I.blob(contents)) {
                 if (unpack) {
-                    var undata = await this.toPack(contents, option, key, Store);
-                    if (undata) return callback(undata);
+                    return this.onpack(contents, option, key, Store,headers);
                 }
             }
             if (contents) {
@@ -1038,77 +1038,81 @@
                 return callback(contents);
             }
         }
-        onprogress(current,total,name){
-            this.progress&&this.progress(name+'('+(total?I.PER(current,total):current)+')',current,total);
+        onprogress(current, total, name) {
+            this.toEvent('progress', { current, total, name });
         }
-        toPack(contents, option, key, Store) {
-            return I.Async(async callback => {
-                var fileext = await F.CheckExt(contents);
-                if (this.ispack.test(fileext)) {
-                    var decompress = new Decompress({
-                        contents: contents,
-                        Name: option.filename,
-                        ext: fileext,
-                        password: this.password,
-                        onprogress:(current,total,name)=>this.onprogress(current,total,this.unpackText+name)
-                    });
-                    var filecontent = await decompress.done();
-                    var maxLength = 0;
-                    var backdata;
-                    if (I.obj(filecontent)) {
-                        await I.Async(
-                            I.toArr(filecontent).map(entry => {
-                                var [name, data] = entry;
-                                if (this.libjs) {
-                                    name = F.getname(name);
-                                    var ftype = F.getMime(name);
-                                    var fkey = T.LibPad + name;
-                                    data = this.reBuf(data, this.unbuf, name, ftype);
-                                    Store.put({
-                                        contents: data,
-                                        filename: name,
-                                        filesize: data.byteLength,
-                                        filetype: ftype,
-                                        type: I.blob(data) ? File.name : I.blob(data) ? Uint8Array.name : this.unbuf,
-                                        version: option.version
-                                    }, fkey);
-                                    if (fkey == key) {
-                                        backdata = data;
-                                    }
-                                } else {
-                                    maxLength += data.byteLength;
-                                    filecontent[name] = this.reBuf(data, this.unbuf);
+        onsuccess(result, headers) {
+            this.toEvent('success', { result, headers });
+        }
+        async onpack(contents, option, key, Store,headers) {
+            var fileext = await F.CheckExt(contents);
+            if (fileext&&this.ispack.test(fileext)) {
+                var filecontent = await new Decompress({
+                    contents: contents,
+                    Name: option.filename,
+                    ext: fileext,
+                    password: this.password,
+                    onprogress: (current, total, name) => this.onprogress(current, total, this.unpackText + name)
+                }).result;
+                var maxLength = 0;
+                var backdata;
+                if (I.obj(filecontent)) {
+                    await I.Async(
+                        I.toArr(filecontent).map(async entry => {
+                            var [name, data] = entry;
+                            if (this.libjs) {
+                                name = F.getname(name);
+                                var ftype = F.getMime(name);
+                                var fkey = T.LibPad + name;
+                                data = this.reBuf(data, this.unbuf, name, ftype);
+                                await Store.put({
+                                    contents: data,
+                                    filename: name,
+                                    filesize: data.byteLength,
+                                    filetype: ftype,
+                                    type: I.blob(data) ? File.name : I.blob(data) ? Uint8Array.name : this.unbuf,
+                                    version: option.version
+                                }, fkey);
+                                if (fkey == key) {
+                                    backdata = data;
                                 }
-                            }));
-                        if (backdata) {
-                            return callback(backdata);
-                        }
-                    }
-                    if (contents && maxLength) {
-                        if (Store) {
-                            if (maxLength > T.maxsize) {
-                                Object.assign(option, {
-                                    contents: contents,
-                                    fileext: fileext,
-                                    type: "unpack",
-
-                                });
-                                if (decompress.password) option.password = decompress.password;
-                                await Store.put(option, key);
                             } else {
-                                contents = null;
-                                Object.assign(option, {
-                                    contents: filecontent,
-                                    fileext: fileext,
-                                    type: NodeList.name,
-                                });
-                                await Store.put(option, key);
+                                maxLength += data.byteLength;
+                                filecontent[name] = this.reBuf(data, this.unbuf);
                             }
-                        }
-                        callback(filecontent);
+                        }));
+                    if (backdata) {
+                        contents = null;
+                        return this.onsuccess(backdata,headers);
+                    }else if(this.libjs&&filecontent){
+                        return this.onsuccess(filecontent,headers);
                     }
                 }
-            });
+                if (contents && maxLength) {
+                    if (Store) {
+                        if (maxLength > T.maxsize) {
+                            Object.assign(option, {
+                                contents: contents,
+                                fileext: fileext,
+                                type: "unpack",
+
+                            });
+                            if (decompress.password) option.password = decompress.password;
+                            await Store.put(option, key);
+                        } else {
+                            contents = null;
+                            Object.assign(option, {
+                                contents: filecontent,
+                                fileext: fileext,
+                                type: NodeList.name,
+                            });
+                            await Store.put(option, key);
+                        }
+                    }
+                    if(filecontent)return this.onsuccess(filecontent,headers);
+                }
+            }
+            this.onsuccess(contents, headers);
 
         }
         cancel(response) {
@@ -1142,14 +1146,14 @@
                     havesize += speedsize;
                 }
                 let current = "";
-                if (length && havesize <= length){
+                if (length && havesize <= length) {
                     current = havesize;
-                }else{
+                } else {
                     current = `${(havesize / 1024).toFixed(1)}KB`;
                     length = 0;
                 }
                 /* 下载进度*/
-                this.onprogress(current, length,this.downText+filename);
+                this.onprogress(current, length, this.downText + filename);
                 chunks.push(value);
             }
             return I.File(chunks, filename, type, headers["last-modified"]);
@@ -1193,15 +1197,27 @@
             return fetch(I.get(url, get), data);
         }
     }
-    class Decompress {
+    class Decompress extends EventTarget{
         constructor(ARG) {
+            super();
             if (!I.obj(ARG))
                 this.contents = ARG;
             else
                 Object.assign(this, ARG);
+                this.on('progress', function (e) {
+                    this.onprogress && this.onprogress.apply(this,e.detail);
+                });
+                this.result = new Promise(re => {
+                    this.once('success', function (e) {
+                        var {detail} = e;
+                        re(detail);
+                        this.success && this.success(detail)
+                    })
+                });
+                this.ondone();
 
         }
-        async done(fn) {
+        async ondone() {
             var {
                 ext,
                 contents
@@ -1210,10 +1226,7 @@
                 ext = await F.CheckExt(contents);
             }
             var result = /(zip|rar|7z)$/.test(ext) && (/zip$/.test(ext) && await this.zip() || await this.rar(ext) || await this.extractor(ext)) || await I.U8(contents);
-            return fn ? fn(result) : result;
-        }
-        progress(current, total, name) {
-            this.onprogress && this.onprogress(current, total, name);
+            this.toEvent('success',result);
         }
         async extractor(ext) {
             return I.Async(async re => {
@@ -1253,7 +1266,7 @@
                         } else if (error && !result[nowFile].length) {
                             delete result[nowFile];
                         }
-                        nowFile && this.progress(len, max, nowFile);
+                        nowFile &&this.toEvent('progress',[len, max, nowFile]);
                     };
                     worker.onerror = e => {
                         worker.terminate();
@@ -1301,7 +1314,7 @@
                             !result && (result = {});
                             return data && (result[file] = data);
                         } else if (t == 4) {
-                            return (total > 0 && total >= current) && this.progress(current, total, name || file);
+                            return (total > 0 && total >= current) &&this.toEvent('progress',[current, total, name || file]);
                         } else if (t === -1) {
                             password = prompt('Enter password.', password || "");
                             if (!password) {
@@ -1349,7 +1362,7 @@
 
         }
         async getData(entry, password) {
-            return entry.getData(new zip.Uint8ArrayWriter(), {password,onprogress:(current,total)=>this.progress(current,total,entry.filename)});
+            return entry.getData(new zip.Uint8ArrayWriter(), { password, onprogress: (current, total) => this.toEvent('progress',[current, total, entry.filename]) });
         }
         async getEncrypted(entry, password) {
             var buf = await I.Async((re) => {
@@ -1369,7 +1382,7 @@
             var {
                 contents
             } = this;
-            if (typeof win.zip === I.TP()) await T.loadLibjs(T.zipsrc, this.onprogress);
+            if (typeof exports.zip === I.TP()) await T.loadLibjs(T.zipsrc, this.onprogress);
             if (!I.blob(contents)) contents = new Blob([contents.buffer || contents], {
                 type: F.getMime('*')
             });
@@ -1470,8 +1483,6 @@
 
                     return I.func(o) && Reflect.apply(o, b, a);
                 },
-                on: (o, ...a) => o && I.Apply(addEventListener, a, o),
-                un: (o, ...a) => o && I.Apply(removeEventListener, a, o),
                 EachNext: (o, a) => !(a = []) || I.Next(o, (s) => a.push(I.num(s[0]) ? s[1] : s)) || a,
                 Next(o, fn) {
                     if (o.entries)
@@ -1828,6 +1839,23 @@
         }
     };
     (function () {
+        Object.assign(EventTarget.prototype, {
+            on(evt, fun, opt) {
+                return this.addEventListener(evt, fun, opt);
+            },
+            un(evt, fun, opt) {
+                return this.removeEventListener(evt, fun, opt);
+            },
+            once(evt, fun, opt) {
+                return this.addEventListener(evt, fun, Object.assign({
+                    passive: !1,
+                    once: !0,
+                }, opt===true?{passive:!0}:opt||{}));
+            },
+            toEvent(evt, detail) {
+                this.dispatchEvent(new CustomEvent(evt,{detail}))
+            }
+        });
         var {
             language,
             serviceWorker
@@ -1844,26 +1872,13 @@
                 langs[1] = "hant";
 
         }
-        Object.assign(T, Nenge, {
+        Object.assign(T, {
             JSpath,
             ROOT: (JSpath && JSpath.replace("assets/js/", "")) || location.pathname,
             langName: langs[0],
             i18nName: langs.join("-"),
             charset: I.LC(document.characterSet),
             language,
-            setNode() {
-                Object.assign(Node.prototype, {
-                    on(evt, fun, opt, cap) {
-                        return T.on(this, evt, fun, opt, cap);
-                    },
-                    un(evt, fun, opt, cap) {
-                        return T.un(this, evt, fun, opt, cap);
-                    },
-                    once(evt, fun, opt, cap) {
-                        return T.once(this, evt, fun, opt, cap);
-                    }
-                });
-            }
         });
         T.ts = [
             I.L(Text),
@@ -1878,7 +1893,8 @@
             date: () => new Date(),
             time: () => Date.now(),
             rand: () => Math.random(),
-            randNum: () => I.IntVal(Math.random().toString().slice(2))
+            randNum: () => I.IntVal(Math.random().toString().slice(2)),
+            CLASS:()=>[CustomElement,CustomFetch,CustomStore,CustomTable,Decompress]
         }, 1);
         if (serviceWorker) {
             I.defines(T, {
@@ -1888,43 +1904,47 @@
                     }
                 }
             });
-            serviceWorker.onerror = function(e){
+            serviceWorker.on('error',function (e) {
                 T.clearWorker();
-                T.CF('pwa_error',e);
-            };
-            serviceWorker.onmessage=async function(event){
+                T.CF('pwa_error', e);
+            });
+            serviceWorker.on('message',async function (event) {
                 let data = event.data;
                 if (I.obj(data)) {
-                    let action = data.action;
+                    let {action,from} = data;
                     if (action) {
                         if (I.str(action)) {
                             if (action == 'GETDBNAME') {
-                                return T.docload(()=>{
+                                return T.docload(() => {
                                     T.PostMessage({
-                                    action: 'WOKERDBNAME',
-                                    result: T.DB_NAME
-                                })})
+                                        action: 'WOKERDBNAME',
+                                        result: T.DB_NAME
+                                    })
+                                })
                             }
-                            if(T.action[action]){
-                                let result = await T.CF(action, data);
-                                if (data.id) {
-                                    data.result = result;
-                                    T.PostMessage(data);
-                                } else {
-                                    T.PostMessage(result);
-                                }
+                            let result = await T.CF(action, data);
+                            if (data.id) {
+                                data.result = result;
+                                T.PostMessage(data);
+                            } else {
+                                T.PostMessage(result);
                             }
                         } else if (I.array(action)) {
                             I.FM(action, (v) => [
                                 v, T[v] || win[v]
                             ]);
-                        }else{
+                        } else {
                             console.log(data);
                         }
+                    }else if(from){
+                        console.log(data);
+                        T.CF(from,data);
                     }
+                }else{
+                    console.log(data);
                 }
-            };
-            serviceWorker.ready.then(sw=>sw&&(sw.onstatechange = e =>T.CF('pwa_statechange',e)));
+            });
+            serviceWorker.ready.then(sw => sw && (sw.onstatechange = e => T.CF('pwa_statechange', e)));
         }
         /*
         let ehtml = document.documentElement;
@@ -1934,9 +1954,10 @@
             }));
         }
         */
-        win.onerror = (msg, url, lineNo, columnNo, error) => alert(msg + lineNo + url);
+        exports.onerror = (msg, url, lineNo, columnNo, error) => alert(msg + lineNo + url);
     })();
-    I.defines(win, {
+    exports.T=T;
+    I.defines(exports, {
         Nenge: () => T
     }, 1);
 });

@@ -801,22 +801,6 @@ audio_latency = "256"`);
          * @returns 
          */
         constructor() {
-            if (!Node.prototype.once) {
-                Object.assign(Node.prototype, {
-                    on(evt, fn, opt, cap) {
-                        return this.addEventListener(evt, fn, opt || { passive: false }, cap);
-                    },
-                    once(evt, fn, opt, cap) {
-                        return this.addEventListener(evt, fn, Object.assign({
-                            passive: !1,
-                            once: !0,
-                        }, opt), cap);
-                    },
-                    un(evt, fn, opt, cap) {
-                        return this.removeEventListener(evt, fn, opt || { passive: false }, cap);
-                    }
-                });
-            }
             if(this.isIPhone){
                 this.videoSize = 480;
                 this.GO_STATUS('videosize','480P');
@@ -837,6 +821,8 @@ audio_latency = "256"`);
         async welcome() {
             /**设置 数据库管理 */
             var VBA = this;
+            $('.wel-index').hidden = !1;
+            $('.wel-index').style.cssText='color: #3643e9;font-size: 1rem;font-weight: bold;text-shadow: 2px 2px 3px #8b7b7b;';
             if (this.isIPhone && !this.isstandalone) {
                 /**
                  * 阻止苹果手机浏览器
@@ -844,6 +830,14 @@ audio_latency = "256"`);
                 $('.wel-index').innerHTML = '<p style="color:red">检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".</p>';
                 return;
             }
+            if (VBA.isPWA) {
+                if (!await navigator.serviceWorker.ready) {
+                    $('.wel-index').innerHTML = 'serviceWorker 未完全加载!稍后替你刷新页面';  
+                    setTimeout(e=>location.reload(),5000);
+                    return;
+                }
+            }
+            $('.wel-index').removeAttribute('style');
             /**
              * 数据库管理事件
              */
@@ -907,12 +901,6 @@ audio_latency = "256"`);
                 progressElm.classList.add('download-progress');
                 progressElm.style.cssText='color: #3643e9;font-size: 1rem;font-weight: bold;text-shadow: 2px 2px 3px #8b7b7b;';
                 gamelist.appendChild(progressElm);
-                if (VBA.isPWA) {
-                    if (!navigator.serviceWorker.controller) {
-                        progressElm.innerHTML = 'serviceWorker 未完全加载!稍后替你刷新页面';
-                        return;
-                    }
-                }
                 /**
                  * 根据核心配置基础信息
                  */
@@ -1029,8 +1017,8 @@ audio_latency = "256"`);
                                     gamelist.appendChild(div);
                                 }
 
-                                T.unFile(file, e => {
-                                    div.innerHTML = e;
+                                T.unFile(file, (current,total,name) => {
+                                    div.innerHTML = (name||file.name)+I.PER(current,total);
                                 }).then(buf => {
                                     div.remove();
                                     switch (elmdo) {
@@ -1098,7 +1086,6 @@ audio_latency = "256"`);
             );
             this.corename = localStorage.getItem('gba_core_mod') || 'mgba';
             $('.wel-core-mod button[data-mod="' + this.corename + '"]').classList.add('active');
-            $('.wel-index').hidden = !1;
         }
         WriteRooms(name, data, gamelist) {
             var VBA = this;
@@ -1839,7 +1826,6 @@ audio_latency = "256"`);
             var input = document.createElement('input');
             input.type = 'file';
             input.onchange = e => {
-                alert(e.target.files[0]);
                 e.target.files.length && fn && fn(e.target.files);
                 input.remove();
             }
@@ -1893,7 +1879,7 @@ audio_latency = "256"`);
                  */
                 pwa_activate(d){
                     console.log(d);
-                    location.reload();
+                    setTimeout(e=>location.reload(),1000);
                 },
                 pwa_error(d){
                     console.log(d);
