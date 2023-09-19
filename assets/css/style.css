@@ -415,27 +415,48 @@ img{
 }
 
 .gba-flex-table>div {
-    display: grid;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
     align-items: center;
-    justify-content: start;
-    grid-template-columns: 60px 60px 1fr;
-    align-content: stretch;
-    justify-items: stretch;
+    height: 160px;
 }
+.gba-flex-table>div:nth-child(1) {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    height: 30px;
+}
+.gba-flex-table>div>:nth-child(1){
+    width: 60px;
+}
+.gba-flex-table>div>:nth-child(2){
+    width: 60px;
+}
+.gba-flex-table>div>:nth-child(3){
+    width: calc(100% - 120px);
 
+}
 .gba-options-backupstate {
     background: aliceblue;
     padding: 5px !important;
     margin: 5px auto !important;
     font-weight: bold;
 }
-
+.state-img img{
+    width: 200px;
+}
 .gba-options-backupstate .state-btn {
     display: flex;
     height: -webkit-fill-available;
     flex-direction: column;
     align-items: center;
     justify-content: space-evenly;
+}
+.gba-options-backupstate .state-btn button{
+    display: block;
+    max-width: max-content;
 }
 .gba-options-cheat{
     background: #5da3df;
@@ -605,7 +626,9 @@ img{
     font-weight: bold;
     font-size: 1rem;
 }
-
+.state-tips{
+    color: #1777af;font-size: 1rem;font-weight: unset;
+}
 canvas {
     display: block;
     max-width:100%;

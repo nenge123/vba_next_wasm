@@ -1,3 +1,7 @@
-/github/vbanextWasm/assets/js/gb/retroarch.wasm	
-/github/vbanextWasm/assets/js/mgba/retroarch.wasm	
-/github/vbanextWasm/assets/js/vbanext/retroarch.wasm	
+assets/js/gb/retroarch.wasm	
+assets/js/mgba/retroarch.wasm	
+assets/js/vbanext/retroarch.wasm
+assets/js/gb/retroarch.min.js
+assets/js/mgba/retroarch.min.js
+assets/js/vbanext/retroarch.min.js
+assets/js/all.js

@@ -13,7 +13,7 @@ var CACHE_LIST = [
     "assets/images/zan.jpg"
 ].map(v => CACHE_PATH + v);
 var isLocal = location.host == '127.0.0.1';
-var version = '2023/09/17 12:53';
+var version = '2023/09/19 09:32';
 var myIDB;
 var PromiseList = {};
 function Check(obj, k) {

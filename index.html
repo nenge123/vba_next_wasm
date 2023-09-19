@@ -99,7 +99,7 @@
             <div class="gba-mask">
                 <div class="gba-menu-top">
                     <button class="gba-menu-win-gohome" data-go="home" hidden>返回主菜单</button>
-                    <button class="gba-menu-win-close" data-go="close">关闭菜单</button>
+                    <button class="gba-menu-win-close" data-go="hidden">关闭菜单</button>
                 </div>
                 <div class="gba-options-home gba-options gba-flex-1">
                     <button data-go="base"><strong>基础操作:</strong><span class="status">重启和金手指</span></button>
@@ -120,8 +120,13 @@
                     <button data-go="ctrl"><strong>键位映射</strong><span>设置键盘或者手柄</span></button>
                 </div>
                 <div class="gba-options-backupstate gba-options" hidden>
-                    <p>有感于<b>究极绿宝石</b>的<b
-                            style="color: #1777af;font-size: 1rem;font-weight: unset;">我预判了你的预判</b>,单一状态无法战胜地狱</p>
+                    <p>
+                        <span>有感于</span>
+                        <b>究极绿宝石的</b>
+                        <b class="state-tips">我预判了你的预判</b>
+                        <span>,单一状态无法战胜地狱</span>
+                    </p>
+                    <p><button data-act="import">导入即时状态</button></p>
                     <div class="gba-options-result gba-flex-table">
                         <div class="backupstate-top">
                             <div>状态位置</div>
@@ -320,7 +325,7 @@
                         <button class="ctrl-reset" type="button">重置</button>
                     </div>
                 </div>
-                <div class="gba-options-cheat gba-options">
+                <div class="gba-options-cheat gba-options" hidden>
                     <div class="gba-cheat-edit" data-pos="0">
                         <div class="act-btn">
                             <button data-act="submit">保存</button>

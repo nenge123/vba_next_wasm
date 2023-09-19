@@ -53,426 +53,7 @@
         console,
         EventTarget
     } = exports;
-    const T = {
-        version: 1,
-        DB_NAME: "XIUNOBBS",
-        DB_STORE_MAP: {
-            libjs: {},
-            myfile: {
-                timestamp: false
-            }
-        },
-        LibStore: "libjs",
-        LibPad: "script-",
-        maxsize: 0x6400000,
-        part: "-part-",
-        lang: {},
-        action: {},
-        StoreList: {},
-        isLocal: /^(127|localhost|172)/.test(location.host),
-        zipsrc: "zip.min.js",
-        un7zsrc: "extract7z.zip",
-        unrarsrc: "libunrar.min.zip",
-        serviceActive: !1,
-        mime: document.contentType,
-        readyState: document.readyState,
-        onLine: navigator.onLine,
-        getStore(dbName, opt) {
-            if (!dbName || dbName == T.DB_NAME) {
-                dbName = T.DB_NAME;
-                opt = opt || T.DB_STORE_MAP;
-            }
-            return T.StoreList[dbName] || new CustomStore(dbName, opt);
-        },
-        getTable(table, dbName, opt) {
-            if (!table) return undefined;
-            return T.getStore(dbName, opt).table(table);
-        },
-        async FetchItem(ARG) {
-            return new CustomFetch(ARG).result;
-        },
-        ajax(ARG) {
-            ARG = I.assign({
-                url: location.href
-            }, ARG || {});
-            return I.Async((resolve) => {
-                const request = new XMLHttpRequest(ARG.paramsDictionary);
-                const texts = T.ts;
-                let evt = ["progress", "readystatechange", "error"];
-                let ResHeaders,
-                    ReType,
-                    success = (...a) => {
-                        ARG.success && ARG.success.apply(request, a);
-                        resolve(a[0]);
-                    },
-                    error = (...a) => {
-                        ARG.error && ARG.error.apply(request, a);
-                        resolve(null);
-                    },
-                    heads = 'head';
-                    request.on(evt[1], (event) => {
-                    let readyState = request.readyState;
-                    if (readyState === 2) {
-                        ResHeaders = F.ajaxHeader(request);
-                        ReType = ResHeaders.type;
-                        if (!ARG.type) {
-                            if (ReType == F.getMime(texts[1])) {
-                                request.responseType = texts[1];
-                            } else if (ReType == F.getMime("xml")) {
-                                request.responseType = "xml";
-                            } else if (ResHeaders.filename || !/(text|html|javascript|css)/.test(ReType)) {
-                                request.responseType = I.L(Blob);
-                            }
-                        } else if (ARG.type == heads) {
-                            request.abort();
-                        }
-                    } else if (readyState === 4) {
-                        if (ARG.type == heads)
-                            return success(ResHeaders);
-
-                        let result = request.response;
-                        if (I.blob(result)) {
-                            result = I.File([result], ResHeaders.filename || F.getname(ARG.url), ReType, ResHeaders["last-modified"]);
-                        }
-                        if (request.status == 200) {
-                            return success(result, ResHeaders);
-                        } else {
-                            return error(request.statusText || "net::ERR_FAILED", ResHeaders, result);
-                        }
-                    }
-                });
-                I.func(ARG[evt[0]]) && request.on(evt[0], (e) => I.progress(ARG[evt[0]], "", e.loaded, e.total, e));
-                I.func(ARG.postProgress) &&request.upload.on(evt[0], (e) => I.progress(ARG.postProgress, "", e.loaded, e.total, e));
-                ARG.upload && I.toArr(ARG.upload, (v) =>request.upload.on(v[0], v[1]));
-                let formData,
-                    headers = ARG.headers || {};
-                if (ARG.overType)
-                    request.overrideMimeType(ARG.overType);
-
-                if (ARG.json) {
-                    formData = I.toJson(ARG.json);
-                    I.assign(headers, {
-                        Accept: [
-                            F.getMime(texts[1]),
-                            F.getMime(texts[0]),
-                            "*/*"
-                        ].join()
-                    });
-                } else if (ARG.post) {
-                    formData = I.post(ARG.post);
-                }
-                if (ARG.type && ARG.type != heads)
-                    request.responseType = ARG.type;
-
-                request.open(!formData ? "GET" : "POST", I.get(ARG.url, {
-                    inajax: T.time
-                }, ARG.get));
-                I.toArr(headers, (entry) => request.setRequestHeader(entry[0], entry[1]));
-                request.send(formData);
-            });
-        },
-        async FetchCache(url, type, exp, dbName) {
-            type = type || I.L(Blob);
-            let cache = await caches.open(dbName || T.DB_NAME);
-            let response = await cache.match(url);
-            if (!response || (exp && T.date - Date.parse(response.headers.get("date")) > exp)) {
-                response = await fetch(url);
-                if (response) {
-                    cache.put(response.url, response.clone());
-                }
-            }
-            if (response)
-                return response[type]();
-
-        },
-        addJS(buf, cb, iscss, id) {
-            if (I.blob(buf)) {
-                id = F.getKeyName(buf.name);
-                if (/css/i.test(buf.type))
-                    iscss = true;
-
-            }
-            var s = I.LC(document.scripts[0].nodeName);
-            id && (id += s + id);
-            if (id && T.$("#" + id))
-                return;
-
-            let script = T.$ce(!iscss ? s : "link"),
-                func = (callback) => {
-                    var type = !iscss ? "js" : "css";
-                    buf = F.URL(buf, type);
-                    Object.assign(script, {
-                        type: F.getMime(type),
-                        href: buf,
-                        src: buf,
-                        rel: I.NC(StyleSheet),
-                        id: id || s + T.time,
-                        crossorigin: "anonymous",
-                        onload(e) {
-                            callback && callback(e);
-                            if (!iscss && /^blob:/.test(buf))
-                                F.reURL(buf);
-
-                            buf = null;
-                        }
-                    });
-                    T.$append(!iscss ? document.body : document.head, script);
-                };
-            if (!cb)
-                return I.Async(func);
-            else
-                return func(cb),
-                    script;
-
-        },
-        async loadScript(js, ARG, bool) {
-            ARG = ARG || {};
-            ARG.url = F.getpath(js);
-            if (bool) {
-                ARG.type = T.ts[0];
-            } else {
-                if (!ARG.store)
-                    ARG.store = T.LibStore;
-
-                if (!ARG.key)
-                    ARG.key = T.LibPad;
-
-            }
-            ARG.version = ARG.version || T.version;
-            let data = await T.FetchItem(ARG);
-            if (!bool) {
-                return await T.addJS(data);
-            }
-            return data;
-        },
-        async addScript(js, ARG) {
-            return await T.addJS(await T.loadScript(js, ARG, !0), null, F.getExt(js) == "css");
-        },
-        async loadLibjs(name, progress, version, decode, Filter) {
-            return await T.addJS(await F.getLibjs(name, progress, version, decode, Filter), null, F.getExt(name) == "css");
-        },
-        async unFile(u8, fn, ARG) {
-            return new Decompress(Object.assign(ARG || {}, {
-                contents: u8,
-                onprogress: fn
-            })).result;
-        },
-        customElement(myelement) {
-            !customElements.get(myelement) && customElements.define(myelement, CustomElement);
-        },
-        Err(msg) {
-            return new Error(msg);
-        },
-        async download(name, buf, type) {
-            let href;
-            if (!buf && name) {
-                buf = name;
-                name = null;
-            }
-            if (/^(http|blob:|data:)/.test(buf)) {
-                href = buf;
-                if (!name && /^(http|blob:)/.test(buf))
-                    name = F.getname(buf);
-
-            } else if (buf) {
-                href = F.URL(buf, type);
-                if (!name)
-                    name = buf.name || T.ts[3] + "." + (
-                        (await F.CheckExt(buf)) || T.ts[3]
-                    );
-
-            }
-            let a = T.$ce("a");
-            a.href = href;
-            a.download = name || "test.txt";
-            a.click();
-            a.remove();
-        },
-        triger(target, type, data) {
-            target = T.$(target);
-            if (!data)
-                data = {
-                    detail: target
-                };
-
-            return (I.evt(type) ? T.dispatch(target, type) : T.dispatch(target, new CustomEvent(type, data)), target);
-        },
-        dispatch(obj, evt) {
-            return obj.dispatchEvent(evt),
-                obj;
-        },
-        Set: o => {
-            if (!o.action)
-                o.action = {};
-
-            return (I.defines(o, {
-                I: {
-                    get: () => I
-                },
-                T: {
-                    get: () => T
-                },
-                RF: {
-                    get: () => T.RF
-                },
-                CF: {
-                    get: () => T.CF
-                },
-                BF: {
-                    get: () => T.BF
-                }
-            }), I);
-        },
-        on(elm, evt, fun, opt, cap) {
-            elm = T.$(elm);
-            evt.split(/\s+/).forEach((v) => elm.on(v, fun, opt === false ? {
-                passive: false
-            } : opt, cap));
-            return elm;
-        },
-        un(elm, evt, fun, opt, cap) {
-            elm = T.$(elm);
-            evt.split(/\s+/).forEach((v) => elm.un(v, fun, opt === false ? {
-                passive: false
-            } : opt, cap));
-            return elm;
-        },
-        once: (elm, evt, fun, cap) => elm.once(evt, fun, {
-            passive: false,
-            once: true
-        }, cap),
-        docload(f) {
-            if (document.readyState != T.readyState)
-                return f && f.call(T);
-
-            document.once("DOMContentLoaded", f);
-        },
-        $: (e, f) => e ? (I.str(e) ? I.$(e, f) : I.func(e) ? T.docload(e) : e) : undefined,
-        $$: (e, f) => I.$$(e, f),
-        $ce: (e) => I.$c(e),
-        $ct(e, txt, c) {
-            let elm = T.$ce(e);
-            if (txt)
-                elm.innerHTML = I.str(txt) ? txt : txt();
-
-            I.Attr(elm, !c ? undefined : I.str(c) ? {
-                class: c
-            } : c);
-            return elm;
-        },
-        $append(a, b) {
-            if (I.str(b))
-                b = T.$ce(b);
-
-            return a.appendChild(b),
-                b;
-        },
-        $add: (e, c) => (e.classList.add(c) && !1) || e,
-        async getItemAppend(name, result, ARG) {
-            let part = T.part,
-                keySplit = name.split(part),
-                keyName = keySplit[0],
-                names = I.toArr(result.filesize / T.maxsize + 1).map(async (v, k) => {
-                    let newkey = keyName;
-                    if (k > 0)
-                        newkey += part + k;
-
-                    if (name == newkey)
-                        return result.contents;
-
-                    let data = await D.GET_ITEM(newkey, ARG);
-                    return data.contents;
-                });
-            let file = I.File(await I.Async(names), keyName, result.filetype);
-            result.contents = null;
-            return file;
-        },
-        docElm(str, mime) {
-            return I.dElm(str, mime || document.contentType);
-        },
-        RF(action, data) {
-            const R = this,
-                A = R.action;
-            if (A[action])
-                return I.func(A[action]) ? I.Apply(A[action], data || [], R) : A[action];
-
-        },
-        CF(action, ...args) {
-            return this.RF(action, args);
-        },
-        BF(action, ...a) {
-            const R = this,
-                A = R.action;
-            return I.func(A[action]) ? a.length ? R.RF(action, a) : A[action].bind(R) : A[action];
-        },
-        getLang(name, arg) {
-            return T.GL(name, arg);
-        },
-        GL(name, arg) {
-            if (!I.none(T.lang[name]))
-                name = T.lang[name];
-
-            return I.obj(arg) ? I.RegRe(name, arg) : name;
-        },
-        MediaQuery(query, fn) {
-            if (matchMedia) {
-                let m = matchMedia(query);
-                m.on("change", (e) => fn(e.matches, e));
-                fn(m.matches);
-            }
-        },
-        MediaMath(str) {
-            return styleMedia.matchMedium(str);
-        },
-        async toZip(files, progress, password) {
-            if (typeof zip === I.TP()) {
-                await T.loadLibjs(T.zipsrc, progress);
-            }
-            const zipFileWriter = new zip.BlobWriter();
-            const zipWriter = new zip.ZipWriter(zipFileWriter, {
-                password
-            });
-            if (!files)
-                return zipWriter;
-
-            if (!I.none(files.length)) {
-                I.toArr(files).map((file) => zipWriter.add(file.name, new zip.BlobReader(file), {
-                    onprogress: (current, total) => I.progress(progress, file.name, current, total)
-                }));
-            } else if (I.obj(files)) {
-                I.toArr(files).map((file) => zipWriter.add(file[0], new zip.Uint8ArrayReader(file[1]), {
-                    onprogress: (current, total) => I.progress(progress, file[0], current, total)
-                }));
-            } else {
-                return zipWriter;
-            }
-            await zipWriter.close({
-                onprogress: (current, total) => I.progress(progress, "enZip", current, total)
-            });
-            return await zipFileWriter.getData();
-        },
-        PostMessage(str) {
-            var sw = this.sw;
-            return sw && sw.postMessage(str);
-        },
-        async openServiceWorker(file) {
-            navigator.serviceWorker.register(file).then(e => {
-                e.active && (e.active.onstatechange = e => T.CF('pwa_statechange', e));
-                e.onupdatefound = e => T.CF('pwa_updatefound', e);
-            })
-        },
-        clearWorker(js) {
-            navigator.serviceWorker.getRegistrations().then(sws => sws.forEach(sw => {
-                if (sw.active) {
-                    if (js && sw.active.scriptURL.includes(js))
-                        sw.unregister();
-                    else if (!js)
-                        sw.unregister();
-                }
-            }));
-        }
-    };
-    const evtname = ["success"];
+    const evtname = ["success", "error", "progress"];
     class CustomElement extends HTMLElement {
         /* 警告 如果文档处于加载中,自定义元素实际上并不能读取子元素(innerHTML等) */
         /*因此 如果仅仅操作属性(Attribute),可以比元素出现前提前定义.否则最好文档加载完毕再定义,并不会影响事件触发 */
@@ -874,46 +455,73 @@
         downText = 'down:';
         constructor(ARG) {
             super();
-            if (I.str(ARG))
-                this.url = ARG;
-            else
-                Object.assign(this, ARG);
-            this.once('error', function (e) {
-                this.error && this.error(e.detail,e);
-            });
-            this.on('progress', function (e) {
-                var { current, total, name } = e.detail;
-                this.progress && this.progress(name + '(' + (total ? I.PER(current, total) : current) + ')', current, total);
-            });
-            this.result = new Promise(re => {
-                this.once('success', function (e) {
-                    var { result, headers } = e.detail;
-                    re(result);
-                    this.success && this.success(result, headers)
+            var CF = this;
+            if (I.str(ARG)) {
+                CF.url = ARG;
+            } else {
+                Object.assign(CF, ARG);
+            }
+            if (ARG.libjs) {
+                CF.store = T.LibStore;
+                CF.type = I.L(Blob);
+            }
+            Object.assign(CF, {
+                onprogress(current, total, name) {
+                    CF.progress && CF.progress(name + '(' + (total ? I.PER(current, total) : current) + ')', current, total);
+                },
+                onsuccess(result, headers) {
+                    CF.toEvent(evtname[0], { result, headers });
+                },
+                onerror(result) {
+                    CF.onsuccess();
+                    CF.error && CF.error(result, CF);
+                },
+                oncancel(response) {
+                    response.body && response.body.cancel();
+                },
+                async getItem(key, version) {
+                    return CF.DB && CF.DB.get(key, version)
+                },
+                async setItem(data, key, contents, type) {
+                    if (CF.DB) {
+                        if (contents) data.contents = contents;
+                        if (type) data.type = type;
+                        CF.DB.put(data, key);
+                    }
+                },
+                urlname: F.getname(CF.url) || 'index.html',
+                DB: T.getTable(CF.store),
+                result: new Promise(re => {
+                    CF.once(evtname[0], function (e) {
+                        var { result, headers } = e.detail;
+                        re(result);
+                        CF.success && CF.success(result, headers)
+                    })
                 })
             });
-            this.onsend();
+            CF.onsend();
         }
         async onsend() {
             var CT = this,
                 contents,
                 headers, {
-                    url,
+                    urlname,
                     type,
                     libjs,
                     store,
                     key,
                     unpack,
                     filename,
-                    cancel,
                     onLine,
                     option,
                     version,
-                    ispack
+                    ispack,
+                    onsuccess,
+                    oncancel,
+                    onerror,
                 } = CT;
-            var urlname = F.getname(url) || "index.html";
             var callback = result => {
-                this.onsuccess(result, headers);
+                onsuccess(result, headers);
             };
             var callresult = async () => {
                 if (result && result.contents) {
@@ -922,17 +530,15 @@
                         fileext,
                         contents,
                         type,
-                        password
                     } = result;
                     if (type == "unpack") {
-                        var opt = {
+                        result = await new Decompress({
                             contents: contents,
                             Name: filename,
                             ext: fileext,
-                            onprogress: (current, total, name) => this.onprogress(current, total, this.unpackText + name)
-                        };
-                        if (password) opt.password = password;
-                        result = await new Decompress(opt).result;
+                            onprogress: (current, total, name) => this.onprogress(current, total, this.unpackText + name),
+                            password: result.password || this.password
+                        }).result;
 
                     } else
                         result = contents;
@@ -949,23 +555,22 @@
                 }
                 store = T.LibStore;
             }
-            var Store = I.IF(store, CustomStore) ? store : T.getTable(store);
-            var result = Store && (await Store.get(key, version));
+            var result = await this.getItem(key, version);
             if (result && (!onLine || !T.onLine)) {
                 return callresult(result);
             }
-            var response = await CT.response;
-            if (I.nil(response) == undefined)
-                return callresult(result);
+            var response = await CT.response();
+            if (I.nil(response)) {
+                if (result) {
+                    return callresult(result);
+                } else {
+                    return onerror({ message: this.statusText });
+                }
+            }
             headers = F.FilterHeader(I.toObj(response.headers) || {});
-            if (!headers.filename)
+            if (!headers.filename) {
                 headers.filename = filename;
-
-            var {
-                url,
-                status,
-                statusText
-            } = response;
+            }
             var {
                 filetype,
                 filesize,
@@ -974,19 +579,13 @@
             if (password) {
                 CT.password = password;
             }
-
-            I.exends(headers, {
-                url,
-                status,
-                statusText
-            });
             if (type == 'head') {
-                cancel(response);
+                oncancel(response);
                 return callback(headers);
             }
             if (result) {
                 if (!result.filesize || filesize == result.filesize) {
-                    cancel(response);
+                    oncancel(response);
                     return callresult(result);
                 }
                 result = undefined;
@@ -995,24 +594,29 @@
                 if (filetype == F.getMime(T.ts[1])) {
                     result = await response.json();
                 } else {
-                    CT.cancel(response);
+                    result = await response.text();
                 }
-                return this.dispatch('error', { message: statusText, headers,result});
+                return onerror({ message: result || response.statusText, headers });
             }
             contents = await CT.steam(response, headers);
             filesize = contents.size;
             if (type != I.L(Blob)) {
                 contents = await I.U8(contents);
-                if (type) {
-                    contents = I.decode(contents);
-                    type = String.name;
+                if (this.Filter) {
+                    contents = await this.Filter(contents, urlname, headers);
+                } else if (type) {
+                    contents = I.decode(contents, this.charset);
                 }
-                if (type == T.ts[0]) {
+                if (type == T.ts[1]) {
                     contents = I.Json(contents);
                     type = T.ts[1];
-                } else if (type == T.ts[0] || headers.type == document.contentType) {
+                } else if (type == T.ts[2]) {
                     type = HTMLElement.name;
                     contents = T.docElm(contents);
+                } else if (I.u8buf(contents)) {
+                    type = Uint8Array.name;
+                } else {
+                    type = String.name;
                 }
             } else {
                 type = File.name;
@@ -1027,35 +631,27 @@
             if (version) option.version = version;
             if (I.u8buf(contents) || I.blob(contents)) {
                 if (unpack) {
-                    return this.onpack(contents, option, key, Store,headers);
+                    return this.onpack(contents, option, key, headers);
                 }
             }
             if (contents) {
-                if (Store) {
-                    option.contents = contents;
-                    Store.put(option, key);
-                }
+                this.setItem(option, key, contents);
                 return callback(contents);
             }
         }
-        onprogress(current, total, name) {
-            this.toEvent('progress', { current, total, name });
-        }
-        onsuccess(result, headers) {
-            this.toEvent('success', { result, headers });
-        }
-        async onpack(contents, option, key, Store,headers) {
-            var fileext = await F.CheckExt(contents);
-            if (fileext&&this.ispack.test(fileext)) {
-                var filecontent = await new Decompress({
+        async onpack(contents, option, key, headers) {
+            var fileext = await F.CheckExt(contents), filecontent;
+            if (fileext && this.ispack.test(fileext)) {
+                var decompress = new Decompress({
                     contents: contents,
                     Name: option.filename,
                     ext: fileext,
                     password: this.password,
                     onprogress: (current, total, name) => this.onprogress(current, total, this.unpackText + name)
-                }).result;
+                });
                 var maxLength = 0;
                 var backdata;
+                filecontent = await decompress.result;
                 if (I.obj(filecontent)) {
                     await I.Async(
                         I.toArr(filecontent).map(async entry => {
@@ -1065,7 +661,7 @@
                                 var ftype = F.getMime(name);
                                 var fkey = T.LibPad + name;
                                 data = this.reBuf(data, this.unbuf, name, ftype);
-                                await Store.put({
+                                await this.setItem({
                                     contents: data,
                                     filename: name,
                                     filesize: data.byteLength,
@@ -1083,35 +679,25 @@
                         }));
                     if (backdata) {
                         contents = null;
-                        return this.onsuccess(backdata,headers);
-                    }else if(this.libjs&&filecontent){
-                        return this.onsuccess(filecontent,headers);
+                        return this.onsuccess(backdata, headers);
+                    } else if (this.libjs && filecontent) {
+                        return this.onsuccess(filecontent, headers);
                     }
                 }
                 if (contents && maxLength) {
-                    if (Store) {
-                        if (maxLength > T.maxsize) {
-                            Object.assign(option, {
-                                contents: contents,
-                                fileext: fileext,
-                                type: "unpack",
-
-                            });
-                            if (decompress.password) option.password = decompress.password;
-                            await Store.put(option, key);
-                        } else {
-                            contents = null;
-                            Object.assign(option, {
-                                contents: filecontent,
-                                fileext: fileext,
-                                type: NodeList.name,
-                            });
-                            await Store.put(option, key);
-                        }
+                    option.fileext = fileext;
+                    if (maxLength > T.maxsize) {
+                        option.type = "unpack";
+                        if (decompress.password) option.password = decompress.password;
+                    } else {
+                        contents = filecontent;
+                        option.type = Object.name;
                     }
-                    if(filecontent)return this.onsuccess(filecontent,headers);
+
                 }
             }
+            await this.setItem(option, key, contents);
+            if (filecontent) return this.onsuccess(filecontent, headers);
             this.onsuccess(contents, headers);
 
         }
@@ -1160,18 +746,15 @@
         }
         reBuf(data, unbuf, name, ftype) {
             if (unbuf == T.ts[0])
-                data = I.decode(data);
+                data = I.decode(data, this.charset);
             else if (unbuf == T.ts[1])
-                data = I.Json(I.decode(data));
+                data = I.Json(I.decode(data, this.charset));
             else if (!unbuf && name)
                 data = I.File([data], name, ftype);
 
             return data;
         }
-        async getStore(store) {
-            return I.IF(store, CustomStore) ? store : T.getTable(store);
-        }
-        get response() {
+        response() {
             var {
                 url,
                 get,
@@ -1194,27 +777,29 @@
                 data.method = "POST";
                 data.body = post;
             }
-            return fetch(I.get(url, get), data);
+            return fetch(I.get(url, get), data).catch(err => {
+                this.statusText = err;
+            });
         }
     }
-    class Decompress extends EventTarget{
+    class Decompress extends EventTarget {
         constructor(ARG) {
             super();
             if (!I.obj(ARG))
                 this.contents = ARG;
             else
                 Object.assign(this, ARG);
-                this.on('progress', function (e) {
-                    this.onprogress && this.onprogress.apply(this,e.detail);
-                });
-                this.result = new Promise(re => {
-                    this.once('success', function (e) {
-                        var {detail} = e;
-                        re(detail);
-                        this.success && this.success(detail)
-                    })
-                });
-                this.ondone();
+            this.on(evtname[2], function (e) {
+                this.onprogress && this.onprogress.apply(this, e.detail);
+            });
+            this.result = new Promise(re => {
+                this.once(evtname[0], function (e) {
+                    var { detail } = e;
+                    re(detail);
+                    this.success && this.success(detail)
+                })
+            });
+            this.ondone();
 
         }
         async ondone() {
@@ -1226,7 +811,7 @@
                 ext = await F.CheckExt(contents);
             }
             var result = /(zip|rar|7z)$/.test(ext) && (/zip$/.test(ext) && await this.zip() || await this.rar(ext) || await this.extractor(ext)) || await I.U8(contents);
-            this.toEvent('success',result);
+            this.toEvent(evtname[0], result);
         }
         async extractor(ext) {
             return I.Async(async re => {
@@ -1266,7 +851,7 @@
                         } else if (error && !result[nowFile].length) {
                             delete result[nowFile];
                         }
-                        nowFile &&this.toEvent('progress',[len, max, nowFile]);
+                        nowFile && this.toEvent(evtname[2], [len, max, nowFile]);
                     };
                     worker.onerror = e => {
                         worker.terminate();
@@ -1314,7 +899,7 @@
                             !result && (result = {});
                             return data && (result[file] = data);
                         } else if (t == 4) {
-                            return (total > 0 && total >= current) &&this.toEvent('progress',[current, total, name || file]);
+                            return (total > 0 && total >= current) && this.toEvent(evtname[2], [current, total, name || file]);
                         } else if (t === -1) {
                             password = prompt('Enter password.', password || "");
                             if (!password) {
@@ -1362,7 +947,7 @@
 
         }
         async getData(entry, password) {
-            return entry.getData(new zip.Uint8ArrayWriter(), { password, onprogress: (current, total) => this.toEvent('progress',[current, total, entry.filename]) });
+            return entry.getData(new zip.Uint8ArrayWriter(), { password, onprogress: (current, total) => this.toEvent(evtname[2], [current, total, entry.filename]) });
         }
         async getEncrypted(entry, password) {
             var buf = await I.Async((re) => {
@@ -1439,8 +1024,8 @@
                 u8obj: (o) => I.IC(o, Uint8Array),
                 u8buf: (o) => I.u8obj(o),
                 str: (o) => I.IC(o, String),
-                cURL: (o) => URL.createObjectURL(o),
-                rURL: (o) => URL.revokeObjectURL(o),
+                toURL: (o) => URL.createObjectURL(o),
+                reURL: (o) => URL.revokeObjectURL(o),
                 bool: (o) => I.IC(o, Boolean),
                 num: (o) => I.IC(o, Number),
                 null: (o) => o === null,
@@ -1579,7 +1164,6 @@
                 }),
                 Date: (o) => new Date(I.IntVal(o) || o)
             });
-            T.mobile = !I.none(document.ontouchend);
         }
         post(obj) {
             let post = I.isForm(obj) ? obj : I.setForm(I.elm(obj) ? obj : I.str(obj) ? I.$(obj) : undefined);
@@ -1625,22 +1209,20 @@
             bmp: /^424D\w{4}0{8}/
         };
         exttype = {
-            text: [
+            "text": [
                 "css",
                 "scss",
                 "sass",
                 "html",
                 "htm",
-                "xml"
+                "xml",
+                "vml",
+                ["style", "css"],
+                ["html", "html"],
+                ["php", "html"],
+                ["txt", "plain"],
             ],
-            "text/javascript": ["js"],
-            "text/css": ["style"],
-            "text/html": [
-                "htm", "php"
-            ],
-            "text/plain": ["txt"],
-            "text/xml": ["vml"],
-            image: [
+            "image": [
                 "jpg",
                 "jpeg",
                 "png",
@@ -1648,19 +1230,21 @@
                 "webp",
                 "avif",
                 "apng",
-                "heic"
+                "heic",
+                ["svg", "svg/xml"]
             ],
-            font: [
+            "font": [
                 "woff", "woff2", "ttf", "otf"
             ],
-            "image/svg+xml": ["svg"],
-            "application/octet-stream": ["*"],
-            application: [
-                "pdf", "json"
-            ],
-            "application/x-zip-compressed": ["zip"],
-            "application/x-rar-compressed": ["rar"],
-            "application/x-7z-compressed": ["7z"]
+            "application": [
+                "pdf",
+                "json",
+                ["js","javascript"],
+                ["*", "octet-stream"],
+                ["zip", "x-zip-compressed"],
+                ["rar", "x-rar-compressed"],
+                ["7z", "x-7z-compressed"],
+            ]
         };
         CheckExt(u8) {
             let buf = u8.slice(0, 16);
@@ -1669,25 +1253,24 @@
                 e(F.mimeHead(await text));
             }) : F.mimeHead(text);
         }
-        async getLibjs(jsfile, progress, version, decode, Filter) {
+        async getLibjs(jsfile, progress, version, Filter, decode) {
             let jsname = F.getname(jsfile),
                 file = jsname.replace(/\.zip$/, ".js");
-            if (F.Libjs[jsname])
+            if (F.Libjs[jsname]) {
                 return F.Libjs[jsname];
-
-            if (F.Libjs[file])
+            }
+            if (F.Libjs[file]) {
                 return F.Libjs[file];
-
+            }
             version = version || T.version;
             let contents = await T.getTable(T.LibStore).getdata(T.LibPad + file, version);
             if (!contents) {
                 contents = await T.FetchItem({
-                    url: F.getlibpath(jsfile) + "?" + T.time,
+                    url: T.JSpath + "lib/" + jsfile + "?" + T.time,
                     libjs: !0,
                     version: version,
                     progress,
                     Filter,
-                    decode,
                     unbuf: decode ? T.ts[0] : !1
                 });
             }
@@ -1704,58 +1287,60 @@
             return F.Libjs[file];
         }
         URL(u8, type) {
-            if (I.str(u8) && /^(blob|http|\/?\w+\/)[^\n]*$/i.test(u8))
+            if (I.str(u8) &&u8.length<255&&/^(blob|http|\/{1,2}(?!\*)|\.\/|.+\/)[^\n]*?$/i.test(u8)){
                 return u8;
-
-            return I.cURL(I.blob(u8) ? u8 : new Blob([u8], {
+            }
+            return I.toURL(I.blob(u8) ? u8 : new Blob([u8], {
                 type: F.getMime(type || (I.u8buf(u8) && F.CheckExt(u8)) || "js")
             }));
         }
         reURL(url) {
-            return I.rURL(url);
-        }
-        getlibpath(js) {
-            let x = /^[\w\-\.]+$/.test(js) ? "lib/" : "";
-            return F.getpath(x + js);
+            return I.reURL(url);
         }
         getname(str) {
-            let name = (str || "").split("/").pop().split("?")[0].split("#")[0];
-            if (!name) {
-                str = (str).match(/\/\?([\w\-\_\.]+?\.[a-z0-9A-Z]+)\&?/);
-                if (str) {
-                    name = str[1];
-                }
+            let name = (str || "").split("/").pop().split("?")[0].split("&")[0].split("#")[0];
+            if (str&&(!name||!/\.\w+$/.test(name))) {
+                str = str.match(/(\?|\&)?([^\&]+\.[a-z0-9A-Z]+)\&?/);
+                return str&&str[2]||'';
             }
             return name || "";
-        }
-        getpath(js) {
-            return /^(\/|https?:\/\/|static\/js\/|data\/|assets|blob\:|\.|\/)/.test(js) ? js : T.JSpath + js;
         }
         getExt(name) {
             return I.LC(F.getname(name).split(".").pop());
         }
         getKeyName(name) {
-            let p = F.getname(name).split(".");
-            return p.slice(0, p.length > 1 ? p.length - 1 : 1).join(".");
+            return F.getname(name).replace(/\.\w+$/,'');
         }
         getMime(type, chartset) {
+            type = type&&type.toLowerCase()||'';
             let mime;
-            if (/^\w+\/\w+$/.test(type) || F.exttype[type])
-                mime = type;
-            else {
-                if (!F.extlist) {
-                    F.extlist = I.assign(I.toArr(F.exttype).map((entry) => I.toObj(I.toArr(entry[1]).map((v) => {
-                        let key = entry[0];
-                        if (!/\//.test(key)) {
-                            delete F.exttype[key];
-                            key += "/" + v;
-                            F.exttype[key] = !0;
+            if (/^\w+\/[\w\;]+$/.test(type)) return type;
+            else type = F.getExt(type)||type.split('.').pop();
+            if (!F.extlist) {
+                F.extlist = I.assign(
+                    I.toArr(F.exttype).map(entry => {
+                        if (I.array(entry[1])) {
+                            return I.toObj(entry[1].map(v => {
+                                if (I.array(v)) {
+                                    return [v[0], entry[0] + '/' + v[1]];
+                                }
+                                let key = entry[0];
+                                if (!/\//.test(key)) {
+                                    delete F.exttype[key];
+                                    key += "/" + v;
+                                    F.exttype[key] = !0;
+                                }
+                                return [v, key];
+                            }))
+                        } else if (I.obj(entry[1])) {
+                            return I.toObj(I.toArr(entry[1]).map(v => {
+                                return [v[0], entry[0] + '/' + v[1]];
+                            }))
                         }
-                        return [v, key];
-                    }))));
-                }
-                mime = F.extlist[F.getExt(type)] || F.extlist["*"];
+                    })
+                );
             }
+            mime = F.extlist[type] || F.extlist["*"];
             if (chartset && /(text|javascript|xml|json)/.test(mime))
                 return mime + ";chartset=utf8";
 
@@ -1838,6 +1423,389 @@
             return "";
         }
     };
+    const T = {
+        version: 1,
+        DB_NAME: "XIUNOBBS",
+        DB_STORE_MAP: {
+            libjs: {},
+            myfile: {
+                timestamp: false
+            }
+        },
+        LibStore: "libjs",
+        LibPad: "script-",
+        maxsize: 0x6400000,
+        part: "-part-",
+        lang: {},
+        action: {},
+        StoreList: {},
+        isLocal: /^(127|localhost|172)/.test(location.host),
+        zipsrc: "zip.min.js",
+        un7zsrc: "extract7z.zip",
+        unrarsrc: "libunrar.min.zip",
+        serviceActive: !1,
+        mime: document.contentType,
+        readyState: document.readyState,
+        onLine: navigator.onLine,
+        mobile: !I.none(document.ontouchend),
+        getStore(dbName, opt) {
+            if (!dbName || dbName == T.DB_NAME) {
+                dbName = T.DB_NAME;
+                opt = opt || T.DB_STORE_MAP;
+            }
+            return T.StoreList[dbName] || new CustomStore(dbName, opt);
+        },
+        getTable(table, dbName, opt) {
+            if (!table) return undefined;
+            if (I.IF(table, CustomTable)) return table;
+            if (I.str(table)) return T.getStore(dbName, opt).table(table);
+        },
+        async FetchItem(ARG) {
+            return new CustomFetch(ARG).result;
+        },
+        ajax(ARG) {
+            ARG = I.assign({
+                url: location.href
+            }, ARG || {});
+            return I.Async((resolve) => {
+                const request = new XMLHttpRequest(ARG.paramsDictionary);
+                const texts = T.ts;
+                let ResHeaders,
+                    ReType,
+                    success = (...a) => {
+                        ARG.success && ARG.success.apply(request, a);
+                        resolve(a[0]);
+                    },
+                    error = (...a) => {
+                        ARG.error && ARG.error.apply(request, a);
+                        resolve(null);
+                    },
+                    heads = 'head';
+                request.on('readystatechange', (event) => {
+                    let readyState = request.readyState;
+                    if (readyState === 2) {
+                        ResHeaders = F.ajaxHeader(request);
+                        ReType = ResHeaders.type;
+                        if (!ARG.type) {
+                            if (ReType == F.getMime(texts[1])) {
+                                request.responseType = texts[1];
+                            } else if (ReType == F.getMime("xml")) {
+                                request.responseType = "xml";
+                            } else if (ResHeaders.filename || !/(text|html|javascript|css)/.test(ReType)) {
+                                request.responseType = I.L(Blob);
+                            }
+                        } else if (ARG.type == heads) {
+                            request.abort();
+                        }
+                    } else if (readyState === 4) {
+                        if (ARG.type == heads)
+                            return success(ResHeaders);
+
+                        let result = request.response;
+                        if (I.blob(result)) {
+                            result = I.File([result], ResHeaders.filename || F.getname(ARG.url), ReType, ResHeaders["last-modified"]);
+                        }
+                        if (request.status == 200) {
+                            return success(result, ResHeaders);
+                        } else {
+                            return error(request.statusText || "net::ERR_FAILED", ResHeaders, result);
+                        }
+                    }
+                });
+                I.func(ARG[evtname[2]]) && request.on(evtname[2], (e) => I.progress(ARG[evtname[2]], "", e.loaded, e.total, e));
+                I.func(ARG.postProgress) && request.upload.on(evtname[2], (e) => I.progress(ARG.postProgress, "", e.loaded, e.total, e));
+                ARG.upload && I.toArr(ARG.upload, (v) => request.upload.on(v[0], v[1]));
+                let formData,
+                    headers = ARG.headers || {};
+                if (ARG.overType)
+                    request.overrideMimeType(ARG.overType);
+
+                if (ARG.json) {
+                    formData = I.toJson(ARG.json);
+                    I.assign(headers, {
+                        Accept: [
+                            F.getMime(texts[1]),
+                            F.getMime(texts[0]),
+                            "*/*"
+                        ].join()
+                    });
+                } else if (ARG.post) {
+                    formData = I.post(ARG.post);
+                }
+                if (ARG.type && ARG.type != heads)
+                    request.responseType = ARG.type;
+
+                request.open(!formData ? "GET" : "POST", I.get(ARG.url, {
+                    inajax: T.time
+                }, ARG.get));
+                I.toArr(headers, (entry) => request.setRequestHeader(entry[0], entry[1]));
+                request.send(formData);
+            });
+        },
+        async FetchCache(url, type, exp, dbName) {
+            type = type || I.L(Blob);
+            let cache = await caches.open(dbName || T.DB_NAME);
+            let response = await cache.match(url);
+            if (!response || (exp && T.date - Date.parse(response.headers.get("date")) > exp)) {
+                response = await fetch(url);
+                if (response) {
+                    cache.put(response.url, response.clone());
+                }
+            }
+            if (response)
+                return response[type]();
+
+        },
+        addJS(buf, cb, iscss, id) {
+            return I.Async(back=>{
+                iscss = iscss||I.buf(buf)&&(buf.type&&/css$/.test(buf.type)||buf.name&&/css$/.test(buf.name));
+                var url = F.URL(buf);
+                var script = T.$ce(iscss?'link':'script');
+                Object.assign(script, {
+                    type: F.getMime(iscss?'css':'js'),
+                    href: url,
+                    src: url,
+                    rel:StyleSheet.name,
+                    crossorigin: "anonymous",
+                    onload(e) {
+                        if (buf!=url){
+                            F.reURL(url);
+                        }
+                        buf = null;
+                        back(cb&&cb(e));
+                    },
+                    onerror(e){
+                        this.onload(e);
+                    }
+                });
+                T.$append(!iscss ? document.body : document.head, script);
+            });
+
+        },
+        async loadLibjs(name, progress, version, Filter, decode) {
+            return await T.addJS(await F.getLibjs(name, progress, version, Filter, decode), null, F.getExt(name) == "css");
+        },
+        async unFile(u8, fn, ARG) {
+            return new Decompress(Object.assign(ARG || {}, {
+                contents: u8,
+                onprogress: fn
+            })).result;
+        },
+        customElement(myelement) {
+            !customElements.get(myelement) && customElements.define(myelement, CustomElement);
+        },
+        Err(msg) {
+            return new Error(msg);
+        },
+        async download(name, buf, type) {
+            let href;
+            if (!buf && name) {
+                buf = name;
+                name = null;
+            }
+            if (/^(http|blob:|data:)/.test(buf)) {
+                href = buf;
+                if (!name && /^(http|blob:)/.test(buf))
+                    name = F.getname(buf);
+
+            } else if (buf) {
+                href = F.URL(buf, type);
+                if (!name)
+                    name = buf.name || T.ts[3] + "." + (
+                        (await F.CheckExt(buf)) || T.ts[3]
+                    );
+
+            }
+            let a = T.$ce("a");
+            a.href = href;
+            a.download = name || "test.txt";
+            a.click();
+            a.remove();
+        },
+        triger(target, type, data) {
+            target = T.$(target);
+            if (!data)
+                data = {
+                    detail: target
+                };
+
+            return (I.evt(type) ? T.dispatch(target, type) : T.dispatch(target, new CustomEvent(type, data)), target);
+        },
+        dispatch(obj, evt) {
+            return obj.dispatchEvent(evt),
+                obj;
+        },
+        Set: o => {
+            if (!o.action)
+                o.action = {};
+
+            return (I.defines(o, {
+                I: {
+                    get: () => I
+                },
+                T: {
+                    get: () => T
+                },
+                RF: {
+                    get: () => T.RF
+                },
+                CF: {
+                    get: () => T.CF
+                },
+                BF: {
+                    get: () => T.BF
+                }
+            }), I);
+        },
+        on(elm, evt, fun, opt, cap) {
+            elm = T.$(elm);
+            evt.split(/\s+/).forEach((v) => elm.on(v, fun, opt === false ? {
+                passive: false
+            } : opt, cap));
+            return elm;
+        },
+        un(elm, evt, fun, opt, cap) {
+            elm = T.$(elm);
+            evt.split(/\s+/).forEach((v) => elm.un(v, fun, opt === false ? {
+                passive: false
+            } : opt, cap));
+            return elm;
+        },
+        once: (elm, evt, fun, cap) => elm.once(evt, fun, {
+            passive: false,
+            once: true
+        }, cap),
+        docload(f) {
+            if (document.readyState != T.readyState)
+                return f && f.call(T);
+
+            document.once("DOMContentLoaded", f);
+        },
+        $: (e, f) => e ? (I.str(e) ? I.$(e, f) : I.func(e) ? T.docload(e) : e) : undefined,
+        $$: (e, f) => I.$$(e, f),
+        $ce: (e) => I.$c(e),
+        $ct(e, txt, c) {
+            let elm = T.$ce(e);
+            if (txt)
+                elm.innerHTML = I.str(txt) ? txt : txt();
+
+            I.Attr(elm, !c ? undefined : I.str(c) ? {
+                class: c
+            } : c);
+            return elm;
+        },
+        $append(a, b) {
+            if (I.str(b))
+                b = T.$ce(b);
+
+            return a.appendChild(b),
+                b;
+        },
+        $add: (e, c) => (e.classList.add(c) && !1) || e,
+        async getItemAppend(name, result, ARG) {
+            let part = T.part,
+                keySplit = name.split(part),
+                keyName = keySplit[0],
+                names = I.toArr(result.filesize / T.maxsize + 1).map(async (v, k) => {
+                    let newkey = keyName;
+                    if (k > 0)
+                        newkey += part + k;
+
+                    if (name == newkey)
+                        return result.contents;
+
+                    let data = await D.GET_ITEM(newkey, ARG);
+                    return data.contents;
+                });
+            let file = I.File(await I.Async(names), keyName, result.filetype);
+            result.contents = null;
+            return file;
+        },
+        docElm(str, mime) {
+            return I.dElm(str, mime || document.contentType);
+        },
+        RF(action, data) {
+            const R = this,
+                A = R.action;
+            if (A[action])
+                return I.func(A[action]) ? I.Apply(A[action], data || [], R) : A[action];
+
+        },
+        CF(action, ...args) {
+            return this.RF(action, args);
+        },
+        BF(action, ...a) {
+            const R = this,
+                A = R.action;
+            return I.func(A[action]) ? a.length ? R.RF(action, a) : A[action].bind(R) : A[action];
+        },
+        getLang(name, arg) {
+            return T.GL(name, arg);
+        },
+        GL(name, arg) {
+            if (!I.none(T.lang[name]))
+                name = T.lang[name];
+
+            return I.obj(arg) ? I.RegRe(name, arg) : name;
+        },
+        MediaQuery(query, fn) {
+            if (matchMedia) {
+                let m = matchMedia(query);
+                m.on("change", (e) => fn(e.matches, e));
+                fn(m.matches);
+            }
+        },
+        MediaMath(str) {
+            return styleMedia.matchMedium(str);
+        },
+        async toZip(files, progress, password) {
+            if (typeof zip === I.TP()) {
+                await T.loadLibjs(T.zipsrc, progress);
+            }
+            const zipFileWriter = new zip.BlobWriter();
+            const zipWriter = new zip.ZipWriter(zipFileWriter, {
+                password
+            });
+            if (!files)
+                return zipWriter;
+
+            if (!I.none(files.length)) {
+                I.toArr(files).map((file) => zipWriter.add(file.name, new zip.BlobReader(file), {
+                    onprogress: (current, total) => I.progress(progress, file.name, current, total)
+                }));
+            } else if (I.obj(files)) {
+                I.toArr(files).map((file) => zipWriter.add(file[0], new zip.Uint8ArrayReader(file[1]), {
+                    onprogress: (current, total) => I.progress(progress, file[0], current, total)
+                }));
+            } else {
+                return zipWriter;
+            }
+            await zipWriter.close({
+                onprogress: (current, total) => I.progress(progress, "enZip", current, total)
+            });
+            return await zipFileWriter.getData();
+        },
+        PostMessage(str) {
+            var sw = this.sw;
+            return sw && sw.postMessage(str);
+        },
+        async openServiceWorker(file) {
+            navigator.serviceWorker.register(file).then(e => {
+                e.active && (e.active.onstatechange = e => T.CF('pwa_statechange', e));
+                e.onupdatefound = e => T.CF('pwa_updatefound', e);
+            })
+        },
+        clearWorker(js) {
+            navigator.serviceWorker.getRegistrations().then(sws => sws.forEach(sw => {
+                if (sw.active) {
+                    if (js && sw.active.scriptURL.includes(js))
+                        sw.unregister();
+                    else if (!js)
+                        sw.unregister();
+                }
+            }));
+        }
+    };
     (function () {
         Object.assign(EventTarget.prototype, {
             on(evt, fun, opt) {
@@ -1850,10 +1818,10 @@
                 return this.addEventListener(evt, fun, Object.assign({
                     passive: !1,
                     once: !0,
-                }, opt===true?{passive:!0}:opt||{}));
+                }, opt === true ? { passive: !0 } : opt || {}));
             },
             toEvent(evt, detail) {
-                this.dispatchEvent(new CustomEvent(evt,{detail}))
+                this.dispatchEvent(new CustomEvent(evt, { detail }))
             }
         });
         var {
@@ -1894,7 +1862,7 @@
             time: () => Date.now(),
             rand: () => Math.random(),
             randNum: () => I.IntVal(Math.random().toString().slice(2)),
-            CLASS:()=>[CustomElement,CustomFetch,CustomStore,CustomTable,Decompress]
+            CLASS: () => [CustomElement, CustomFetch, CustomStore, CustomTable, Decompress]
         }, 1);
         if (serviceWorker) {
             I.defines(T, {
@@ -1904,14 +1872,14 @@
                     }
                 }
             });
-            serviceWorker.on('error',function (e) {
+            serviceWorker.on(evtname[1], function (e) {
                 T.clearWorker();
                 T.CF('pwa_error', e);
             });
-            serviceWorker.on('message',async function (event) {
+            serviceWorker.on('message', async function (event) {
                 let data = event.data;
                 if (I.obj(data)) {
-                    let {action,from} = data;
+                    let { action, from } = data;
                     if (action) {
                         if (I.str(action)) {
                             if (action == 'GETDBNAME') {
@@ -1936,11 +1904,11 @@
                         } else {
                             console.log(data);
                         }
-                    }else if(from){
+                    } else if (from) {
                         console.log(data);
-                        T.CF(from,data);
+                        T.CF(from, data);
                     }
-                }else{
+                } else {
                     console.log(data);
                 }
             });
@@ -1956,7 +1924,7 @@
         */
         exports.onerror = (msg, url, lineNo, columnNo, error) => alert(msg + lineNo + url);
     })();
-    exports.T=T;
+    exports.T = T;
     I.defines(exports, {
         Nenge: () => T
     }, 1);

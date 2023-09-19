@@ -118,20 +118,18 @@
             var { MountConfig, FSROOT, EXTREGX, corename, isPWA} = emu;
             emu.Module = this;
             FSROOT.etc = '/etc/';
-            var isRuntimeInitialized = new Promise(re=>{
-                /**
-                 * WASM加载完毕
-                 */
-                this._isRuntimeInitialized = re;
-            });
-
             Object.assign(this, {
                 MountConfig,
                 FSROOT,
                 corename,
                 EXTREGX,
                 isPWA,
-                isRuntimeInitialized,
+                isRuntimeInitialized:new Promise(re=>{
+                    /**
+                     * WASM加载完毕
+                     */
+                    this._isRuntimeInitialized = re;
+                }),
                 canvas: emu.canvas || document.querySelector('canvas'),
                 print: (e) => console.log(e),
                 printErr: (e) => {
@@ -471,10 +469,12 @@ audio_latency = "256"`);
          * 读取即时状态
          * @param {Number} name 
          */
-        async toLoadState(name) {
-            if (name && name.constructor === Number) {
-                var keyname = `${this.corename}-${this.RoomName}-${name}.state`;
-                var statebuf = await MyTable('states').getdata(keyname);
+        async toLoadState(name,statebuf) {
+            if (statebuf||name && name.constructor === Number) {
+                if(!statebuf){
+                    var keyname = `${this.corename}-${this.RoomName}-${name}.state`;
+                    var statebuf = await MyTable('states').getdata(keyname);
+                }
                 if (statebuf instanceof Uint8Array) {
                     this.writeFile('/game.state', statebuf);
                     this.cwrap('load_state', 'number', ['string', 'number'])('game.state', 0);
@@ -506,6 +506,15 @@ audio_latency = "256"`);
          */
         toSaveSRM(data) {
             this.writeFile(this.FSROOT.saves + `/${this.RoomName}.srm`, data);
+        }
+        /**
+         * 写入存档
+         * @param {*} name 
+         * @param {*} data 
+         */
+        toWriteSaves(name,data){
+            this.writeFile(this.FSROOT.saves + `/${name}`, data);
+
         }
         /**
          * 根据电子存档地址读取电子存档
@@ -1106,6 +1115,10 @@ audio_latency = "256"`);
                 li.onclick = function () {
                     VBA.StartGame(this.dataset.rungame);
                 }
+            }else if(/\.srm$/i.test(romsName)&&data.byteLength > 0x8000){
+                VBA.Module.toWriteSaves(romsName,data)
+            } else if(/\.state$/i.test(romsName)&&data.byteLength > 0x8000){
+                VBA.Module.toWriteSaves(romsName,data)
             } else {
                 li.innerHTML = romsName + ' 非GBA后缀跳过';
 
@@ -1118,11 +1131,11 @@ audio_latency = "256"`);
             this.Module.toStartGame(name, data);
             this.buttons = this.Module.ButtonsInput;
             this.isRunning = !0;
+            this.setCoreOption();
+            this.setShaderOption();
+            this.setMenuEvent();
             setTimeout(()=>{
                 $('.gba-ui').hidden = !1;
-                this.setCoreOption();
-                this.setShaderOption();
-                this.setMenuEvent();
                 this.setGamePadKEY();
                 this.setTouchKey();
             },500);
@@ -1281,7 +1294,22 @@ audio_latency = "256"`);
             VBA.GO_BUTTON('backupstate', function (e) {
                 clearImages();
                 var pos = parseInt(this.parentNode.dataset.pos);
-                if (this.dataset.act == 'write') {
+                if(this.dataset.act=='import'){
+                    VBA.upload(async files=>{
+                        var u8 = await  T.unFile(files[0],(a,b,c)=>this.innerHTML=`${c}(${a}/${b})`);
+                        if(I.obj(u8)){
+                            ToArr(u8,entry=>{
+                                if(/\.state$/.test(entry[0])){
+                                    VBA.Module.toLoadState(1,entry[1]);
+                                }
+                            });
+                        }else{
+                            VBA.Module.toLoadState(1,u8);
+                        }
+                        this.innerHTML = '导入存档';
+                        VBA.GO_HIDDEN();
+                    });
+                }else if (this.dataset.act == 'write') {
                     VBA.Module.toSaveState(pos, imagebuf => {
                         var stateimg = this.parentNode.nextElementSibling;
                         if ($('img', stateimg)) {
@@ -1290,6 +1318,7 @@ audio_latency = "256"`);
                         } else {
                             stateimg.innerHTML = `<img src="${ImageURL(imagebuf)}"><p class="state-time">${new Date().toLocaleString()}</p>`;
                         }
+                        VBA.GO_HIDDEN();
                     });
                 } else {
                     VBA.Module.toLoadState(pos).then(m => VBA.GO_HIDDEN());
@@ -1417,7 +1446,7 @@ audio_latency = "256"`);
                         VBA.saveState();
                         break;
                     case 'openmenu':
-                        VBA.GO_MENU('home');
+                        VBA.GO_MENU();
                         break;
                     case 'fastForward':
                         VBA.fastForward();
@@ -1479,7 +1508,7 @@ audio_latency = "256"`);
                     if (haveelm) {
                         haveelm[1][0].classList.add('ctrl-have');
                         setTimeout(() => haveelm[1][0].classList.remove('ctrl-have'), 600);
-                    } else {
+                    } else if(e.code){
                         keyelm.value = e.code;
                         ctrlset[id][0] = keyelm.value;
                         localStorage.setItem(dbkey, JSON.stringify(ctrlset));
@@ -1511,6 +1540,7 @@ audio_latency = "256"`);
                 if (elm instanceof HTMLTextAreaElement) return;
                 if (elm instanceof HTMLSelectElement) return;
                 var code = e.code;
+                if(!code) return;
                 ToArr(ctrlset, ctrlItem => {
                     if (ctrlItem[1][0] == code) {
                         var num = ctrlElm[ctrlItem[0]][2];
@@ -1799,22 +1829,31 @@ audio_latency = "256"`);
             $$(`.gba-options-${name} button`).forEach(elm => elm.on('click', fn));
         }
         GO_MENU(name, e) {
-            if (name == 'close') {
+            if(name == 'hidden'){
+                this.GO_HIDDEN();
+            }else if (name == 'close') {
                 this.GO_MENU('home');
                 this.GO_HIDDEN();
             } else {
                 var elmwin = $('.gba-menu-win');
+                var elmOpen;
                 elmwin.hidden = !1;
                 $$('.gba-options', elmwin).forEach(elm => {
-                    elm.hidden = !0;
+                    if(name)elm.hidden = !0;
+                    else if(!elm.hidden)elmOpen = elm;
                 });
+                if(!name&&!elmOpen) name='home';
                 if (name != 'home') {
                     $('.gba-menu-win-gohome').hidden = !1;
                 } else {
                     $('.gba-menu-win-gohome').hidden = !0;
                 }
-                $('.gba-options-' + name).hidden = !1;
-                $('.gba-options-' + name).dispatchEvent(new CustomEvent('menuopen', {}));
+                if(name){
+                    $('.gba-options-' + name).hidden = !1;
+                    $('.gba-options-' + name).toEvent('menuopen',{});
+                }else{
+                    elmOpen.toEvent('menuopen',{});
+                }
             }
             if (e) {
                 e.preventDefault();
