@@ -830,29 +830,37 @@ audio_latency = "256"`);
         async welcome() {
             /**设置 数据库管理 */
             var VBA = this;
-            $('.wel-index').hidden = !1;
+            $('.wel-index').hidden = !0;
+            var stateTips = $('.wel-state-tips');
             if (this.isIPhone && !this.isstandalone) {
                 /**
                  * 阻止苹果手机浏览器
                  */
-                $('.wel-index').classList.add('state-tips');
-                $('.wel-index').style.color = '#e1ff00';
-                $('.wel-index').innerHTML = '检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".';
+                 stateTips.style.color = '#e1ff00';
+                 stateTips.innerHTML = '检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".';
                 return;
             }
             if (VBA.isPWA) {
-                if (!navigator.serviceWorker.controller) {
-                    $('.wel-index').classList.add('state-tips');
-                    $('.wel-index').innerHTML = 'serviceWorker 未完全加载!<br>稍后替你刷新页面!<br>核心下载过慢可以打开手游加速器,毕竟Github服务器在国内容易大姨妈';  
-                    setTimeout(e=>location.reload(),5000);
-                    return;
-                }
+                    stateTips.innerHTML = 'serviceWorker 未完全加载!<br>稍后替你刷新页面!<br>核心下载过慢可以打开手游加速器,毕竟Github服务器在国内容易大姨妈';
+                    await T.PWAReady;
             }
+            stateTips.remove();
+            $('.wel-index').hidden = !1;
             /**
              * 数据库管理事件
              */
-            $$('.wel-btn button[data-db]').forEach(elm => elm.on('click', async function (e) {
+            $$('.wel-index .wel-btn button').forEach(elm => elm.on('click', async function (e) {
                 var html = '';
+                if(this.dataset.act=='worker'){
+                    this.disabled = !0;
+                    this.innerHTML = '请稍等,当更新完毕刷新页面';
+                    T.action['pwa_upatecaches'] = e=>{
+                        this.innerHTML = '缓存已更新';
+                        location.reload();
+                    };
+                    T.PostMessage({action:'UPDATE CACHES'});
+                    return;
+                }
                 var table = this.dataset.db;
                 ToArr(await MyTable(this.dataset.db).cursor('timestamp'), entry => {
                     var [key, time] = entry;
@@ -1917,9 +1925,12 @@ audio_latency = "256"`);
                  * 回调函数 表示PWA已经激活
                  * @returns 
                  */
+                pwa_install(d){
+                    console.log(d);
+                },
                 pwa_activate(d){
                     console.log(d);
-                    setTimeout(e=>location.reload(),1000);
+                    //setTimeout(e=>location.reload(),1000);
                 },
                 pwa_error(d){
                     console.log(d);

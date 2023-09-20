@@ -16,6 +16,7 @@ var isLocal = location.host == '127.0.0.1';
 var version = '2023/09/20 12:16';
 var myIDB;
 var PromiseList = {};
+var NowClient;
 function Check(obj, k) {
     for (let a in k) if (obj[a] != k[a]) return !1;
     return !0;
@@ -59,19 +60,20 @@ function getHeaders(headers) {
     headers.forEach((a, b) => objs[b] = a);
     return objs;
 }
+async function getClient(){
+    return NowClient||(await self.clients.matchAll()).filter(v=>v.visibilityState == 'visible')[0];
+}
 function postMessage(str) {
-    self.clients.matchAll().then(WindowClients => WindowClients.forEach(Clients => {
-        if (Clients.visibilityState == 'visible') {
-            if (str && str.constructor === Object) {
-                Object.assign(str, {
-                    from: ServiceWorker.name,
-                    origin: CACHE_PATH,
-                    scriptURL: serviceWorker.scriptURL
-                });
-            }
-            Clients.postMessage(str);
+    getClient().then(client=>{
+        if (str && str.constructor === Object) {
+            Object.assign(str, {
+                from: ServiceWorker.name,
+                origin: CACHE_PATH,
+                scriptURL: serviceWorker.scriptURL,
+            });
         }
-    }))
+        client&&client.postMessage(str);
+    });
 }
 function getResponse(url, action) {
     let id = (Math.random() * Math.random() + '').slice(2);
@@ -167,27 +169,33 @@ function saveCaches(cache_name, result) {
         }
     });
 }
+async function updateCaches(action){
+    var myCACHE = await caches.open(CACHE_NAME);
+    await Promise.all(CACHE_LIST.map(async v => {
+        if(isLocal)console.log(v);
+        var re = await fetch(v + '?' + Date.now());
+        myCACHE.put(v, re);
+    }));
+    postMessage({ action});
+}
 Object.entries({
-    async install(event) {
+    install(event) {
         console.log('serviceWorker install');
-        if (!isLocal && navigator.onLine) {
-            return event.waitUntil(new Promise(async re => {
-                var myCACHE = await caches.open(CACHE_NAME);
-                await Promise.all(CACHE_LIST.map(async v => {
-                    var re = await fetch(v + '?' + Date.now());
-                    myCACHE.put(v, re);
-                }));
-                re(postMessage({ action: 'pwa_install' }));
-
-            }));
+        //if (!0 || !isLocal&& navigator.onLine) {
+            //return event.waitUntil(updateCaches().then(()=>self.skipWaiting()));
             //.map(v=>new Request(v,{cache:'no-cache'}))
-        }
+        //}
+        postMessage({action:'pwa_install',cachewrite:!1});
         return self.skipWaiting(); //跳过等待
     },
     activate(event) {
-        console.log('serviceWorker activate');
+        console.log('serviceWorker activate',event.waitUntil);
         //!myIDB && postMessage({ action: 'GETDBNAME' });
-        postMessage({ action: 'pwa_activate', result: event.data });
+        if(!isLocal&& navigator.onLine){
+            return event.waitUntil(updateCaches('pwa_activate').then(e=>self.skipWaiting()));
+        }else{
+            postMessage({action:'pwa_activate',cachewrite:!1});
+        }
         return self.skipWaiting(); //跳过等待
     },
     fetch(event) {
@@ -249,7 +257,7 @@ Object.entries({
                             */
                             if (!response) {
                                 response = await fetch(event.request);
-                                if (!isLocal && response && response.status == 200 && (isCache || isCDN)) {
+                                if (!isLocal && response && response.status == 200 && isCDN) {
                                     DB.put(event.request, response.clone());
                                 }
                             }
@@ -273,7 +281,12 @@ Object.entries({
         if (data && data.constructor === Object) {
             if (isLocal) console.log(data);
             var { action, result, id } = data;
-            if (action == 'WOKERDBNAME') {
+            if (action == 'CLIENT') {
+                console.log('worker 建立通信');
+                NowClient = event.source;
+            } else if (action == 'UPDATE CACHES') {
+                updateCaches('pwa_upatecaches')
+            } else if (action == 'WOKERDBNAME') {
                 !myIDB && (myIDB = LoadDB(result));
             } else if (action == 'WRITECACHE') {
                 saveCaches(data.cachename || CACHE_NAME, result);

@@ -1423,46 +1423,46 @@
             return "";
         }
     };
-    const T = {
-        version: 1,
-        DB_NAME: "XIUNOBBS",
-        DB_STORE_MAP: {
+    const T = new class NengeObj extends EventTarget{
+        version = 1;
+        DB_NAME = "XIUNOBBS";
+        DB_STORE_MAP = {
             libjs: {},
             myfile: {
                 timestamp: false
             }
-        },
-        LibStore: "libjs",
-        LibPad: "script-",
-        maxsize: 0x6400000,
-        part: "-part-",
-        lang: {},
-        action: {},
-        StoreList: {},
-        isLocal: /^(127|localhost|172)/.test(location.host),
-        zipsrc: "zip.min.js",
-        un7zsrc: "extract7z.zip",
-        unrarsrc: "libunrar.min.zip",
-        serviceActive: !1,
-        mime: document.contentType,
-        readyState: document.readyState,
-        onLine: navigator.onLine,
-        mobile: !I.none(document.ontouchend),
+        }
+        LibStore = "libjs";
+        LibPad = "script-";
+        maxsize = 0x6400000;
+        part = "-part-";
+        lang = {};
+        action = {};
+        StoreList = {};
+        isLocal = /^(127|localhost|172)/.test(location.host);
+        zipsrc = "zip.min.js";
+        un7zsrc = "extract7z.zip";
+        unrarsrc = "libunrar.min.zip";
+        serviceActive = !1;
+        mime = document.contentType;
+        readyState = document.readyState;
+        onLine = navigator.onLine;
+        mobile = !I.none(document.ontouchend);
         getStore(dbName, opt) {
             if (!dbName || dbName == T.DB_NAME) {
                 dbName = T.DB_NAME;
                 opt = opt || T.DB_STORE_MAP;
             }
             return T.StoreList[dbName] || new CustomStore(dbName, opt);
-        },
+        }
         getTable(table, dbName, opt) {
             if (!table) return undefined;
             if (I.IF(table, CustomTable)) return table;
             if (I.str(table)) return T.getStore(dbName, opt).table(table);
-        },
+        }
         async FetchItem(ARG) {
             return new CustomFetch(ARG).result;
-        },
+        }
         ajax(ARG) {
             ARG = I.assign({
                 url: location.href
@@ -1541,7 +1541,7 @@
                 I.toArr(headers, (entry) => request.setRequestHeader(entry[0], entry[1]));
                 request.send(formData);
             });
-        },
+        }
         async FetchCache(url, type, exp, dbName) {
             type = type || I.L(Blob);
             let cache = await caches.open(dbName || T.DB_NAME);
@@ -1555,7 +1555,7 @@
             if (response)
                 return response[type]();
 
-        },
+        }
         addJS(buf, cb, iscss, id) {
             return I.Async(back=>{
                 iscss = iscss||I.buf(buf)&&(buf.type&&/css$/.test(buf.type)||buf.name&&/css$/.test(buf.name));
@@ -1581,22 +1581,22 @@
                 T.$append(!iscss ? document.body : document.head, script);
             });
 
-        },
+        }
         async loadLibjs(name, progress, version, Filter, decode) {
             return await T.addJS(await F.getLibjs(name, progress, version, Filter, decode), null, F.getExt(name) == "css");
-        },
+        }
         async unFile(u8, fn, ARG) {
             return new Decompress(Object.assign(ARG || {}, {
                 contents: u8,
                 onprogress: fn
             })).result;
-        },
+        }
         customElement(myelement) {
             !customElements.get(myelement) && customElements.define(myelement, CustomElement);
-        },
+        }
         Err(msg) {
             return new Error(msg);
-        },
+        }
         async download(name, buf, type) {
             let href;
             if (!buf && name) {
@@ -1621,7 +1621,7 @@
             a.download = name || "test.txt";
             a.click();
             a.remove();
-        },
+        }
         triger(target, type, data) {
             target = T.$(target);
             if (!data)
@@ -1630,12 +1630,12 @@
                 };
 
             return (I.evt(type) ? T.dispatch(target, type) : T.dispatch(target, new CustomEvent(type, data)), target);
-        },
+        }
         dispatch(obj, evt) {
             return obj.dispatchEvent(evt),
                 obj;
-        },
-        Set: o => {
+        }
+        Set(o){
             if (!o.action)
                 o.action = {};
 
@@ -1656,34 +1656,40 @@
                     get: () => T.BF
                 }
             }), I);
-        },
-        on(elm, evt, fun, opt, cap) {
+        }
+        onEvent(elm, evt, fun, opt, cap) {
             elm = T.$(elm);
             evt.split(/\s+/).forEach((v) => elm.on(v, fun, opt === false ? {
                 passive: false
             } : opt, cap));
             return elm;
-        },
-        un(elm, evt, fun, opt, cap) {
+        }
+        unEvent(elm, evt, fun, opt, cap) {
             elm = T.$(elm);
             evt.split(/\s+/).forEach((v) => elm.un(v, fun, opt === false ? {
                 passive: false
             } : opt, cap));
             return elm;
-        },
-        once: (elm, evt, fun, cap) => elm.once(evt, fun, {
+        }
+        onceEvent(elm, evt, fun, cap){
+            return  elm.once(evt, fun, {
             passive: false,
             once: true
-        }, cap),
+        }, cap)}
         docload(f) {
             if (document.readyState != T.readyState)
                 return f && f.call(T);
-
             document.once("DOMContentLoaded", f);
-        },
-        $: (e, f) => e ? (I.str(e) ? I.$(e, f) : I.func(e) ? T.docload(e) : e) : undefined,
-        $$: (e, f) => I.$$(e, f),
-        $ce: (e) => I.$c(e),
+        }
+        $(e, f){
+            return e ? (I.str(e) ? I.$(e, f) : I.func(e) ? T.docload(e) : e) : undefined;
+        }
+        $$(e, f){
+            return I.$$(e, f)
+        }
+        $ce(e){
+            return I.$c(e)
+        }
         $ct(e, txt, c) {
             let elm = T.$ce(e);
             if (txt)
@@ -1693,15 +1699,15 @@
                 class: c
             } : c);
             return elm;
-        },
+        }
         $append(a, b) {
-            if (I.str(b))
-                b = T.$ce(b);
-
-            return a.appendChild(b),
-                b;
-        },
-        $add: (e, c) => (e.classList.add(c) && !1) || e,
+            if (I.str(b))b = T.$ce(b);
+            a.appendChild(b);
+            return b;
+        }
+        $add(e, c){
+            return (e.classList.add(c) && !1) || e
+        }
         async getItemAppend(name, result, ARG) {
             let part = T.part,
                 keySplit = name.split(part),
@@ -1720,44 +1726,44 @@
             let file = I.File(await I.Async(names), keyName, result.filetype);
             result.contents = null;
             return file;
-        },
+        }
         docElm(str, mime) {
             return I.dElm(str, mime || document.contentType);
-        },
+        }
         RF(action, data) {
             const R = this,
                 A = R.action;
             if (A[action])
                 return I.func(A[action]) ? I.Apply(A[action], data || [], R) : A[action];
 
-        },
+        }
         CF(action, ...args) {
             return this.RF(action, args);
-        },
+        }
         BF(action, ...a) {
             const R = this,
                 A = R.action;
             return I.func(A[action]) ? a.length ? R.RF(action, a) : A[action].bind(R) : A[action];
-        },
+        }
         getLang(name, arg) {
             return T.GL(name, arg);
-        },
+        }
         GL(name, arg) {
             if (!I.none(T.lang[name]))
                 name = T.lang[name];
 
             return I.obj(arg) ? I.RegRe(name, arg) : name;
-        },
+        }
         MediaQuery(query, fn) {
             if (matchMedia) {
                 let m = matchMedia(query);
                 m.on("change", (e) => fn(e.matches, e));
                 fn(m.matches);
             }
-        },
+        }
         MediaMath(str) {
             return styleMedia.matchMedium(str);
-        },
+        }
         async toZip(files, progress, password) {
             if (typeof zip === I.TP()) {
                 await T.loadLibjs(T.zipsrc, progress);
@@ -1784,17 +1790,33 @@
                 onprogress: (current, total) => I.progress(progress, "enZip", current, total)
             });
             return await zipFileWriter.getData();
-        },
+        }
         PostMessage(str) {
             var sw = this.sw;
             return sw && sw.postMessage(str);
-        },
+        }
         async openServiceWorker(file) {
-            navigator.serviceWorker.register(file).then(e => {
-                e.active && (e.active.onstatechange = e => T.CF('pwa_statechange', e));
-                e.onupdatefound = e => T.CF('pwa_updatefound', e);
+            var {serviceWorker} = navigator;
+            serviceWorker.register(file).then(e => {
+                var sw;
+                if(e.installing){
+                    sw = e.installing;
+                    this.sendClient(sw);
+                    this._PWAReady(!0);
+                }else if(e.active){
+                    sw = e.active;
+                    sw.on('statechange',e =>{
+                        this.sendClient(e.target.active);
+                        T.CF('pwa_statechange', e)
+                    });
+                }
+                T.sw = sw;
+                e.on('updatefound',e => {
+                    this.sendClient(e.target.active);
+                    T.CF('pwa_updatefound', e)
+                });
             })
-        },
+        }
         clearWorker(js) {
             navigator.serviceWorker.getRegistrations().then(sws => sws.forEach(sw => {
                 if (sw.active) {
@@ -1805,29 +1827,89 @@
                 }
             }));
         }
+        sendClient(sw){
+            if(sw){
+                sw.postMessage({action:'CLIENT'});
+                if(sw!=this.sw)this.sw = sw;
+            }
+        }
+        setWorker(serviceWorker){
+            serviceWorker.on(evtname[1], function (e) {
+                T.clearWorker();
+                T.CF('pwa_error', e);
+            });
+            serviceWorker.on('message', async function (event) {
+                let data = event.data;
+                if(T.isLocal)console.log(data);
+                if (I.obj(data)) {
+                    let { action, from } = data;
+                    if (action) {
+                        if (I.str(action)) {
+                            if (action == 'GETDBNAME') {
+                                return T.docload(() => {
+                                    T.PostMessage({
+                                        action: 'WOKERDBNAME',
+                                        result: T.DB_NAME
+                                    })
+                                })
+                            }
+                            let result = await T.CF(action, data);
+                            if (data.id) {
+                                data.result = result;
+                                T.PostMessage(data);
+                            } else {
+                                T.PostMessage(result);
+                            }
+                        } else if (I.array(action)) {
+                            I.FM(action, (v) => [
+                                v, T[v] || win[v]
+                            ]);
+                        }
+                    } else if (from) {
+                        T.CF(from, data);
+                    }
+                }
+            });
+            serviceWorker.ready.then(sw => sw && (sw.onstatechange = e => T.CF('pwa_statechange', e)));
+            return !0;
+        }
+        constructor(){
+            super();            
+            Object.assign(EventTarget.prototype, {
+                on(evt, fun, opt) {
+                    return this.addEventListener(evt, fun, opt);
+                },
+                un(evt, fun, opt) {
+                    return this.removeEventListener(evt, fun, opt);
+                },
+                once(evt, fun, opt) {
+                    return this.addEventListener(evt, fun, Object.assign({
+                        passive: !1,
+                        once: !0,
+                    }, opt === true ? { passive: !0 } : opt || {}));
+                },
+                toEvent(evt, detail) {
+                    this.dispatchEvent(new CustomEvent(evt, { detail }))
+                }
+            });
+            var {serviceWorker} = navigator;
+            if(serviceWorker){
+                this.setWorker(serviceWorker)
+                this.sw = serviceWorker.controller;
+                this.PWAReady = new Promise(re=>{
+                    if(this.sw){
+                        this.sw.postMessage({action:'CLIENT'})
+                        re(!0);
+                    }else{
+                        this._PWAReady=re;
+                    }
+                });
+
+            }
+        }
     };
     (function () {
-        Object.assign(EventTarget.prototype, {
-            on(evt, fun, opt) {
-                return this.addEventListener(evt, fun, opt);
-            },
-            un(evt, fun, opt) {
-                return this.removeEventListener(evt, fun, opt);
-            },
-            once(evt, fun, opt) {
-                return this.addEventListener(evt, fun, Object.assign({
-                    passive: !1,
-                    once: !0,
-                }, opt === true ? { passive: !0 } : opt || {}));
-            },
-            toEvent(evt, detail) {
-                this.dispatchEvent(new CustomEvent(evt, { detail }))
-            }
-        });
-        var {
-            language,
-            serviceWorker
-        } = navigator;
+        var {language} = navigator;
         var spath = document.currentScript,
             src = spath && spath.src.split("?"),
             JSpath = src && src[0].split("/").slice(0, -1).join("/") + "/",
@@ -1864,56 +1946,6 @@
             randNum: () => I.IntVal(Math.random().toString().slice(2)),
             CLASS: () => [CustomElement, CustomFetch, CustomStore, CustomTable, Decompress]
         }, 1);
-        if (serviceWorker) {
-            I.defines(T, {
-                sw: {
-                    get() {
-                        return serviceWorker.controller;
-                    }
-                }
-            });
-            serviceWorker.on(evtname[1], function (e) {
-                T.clearWorker();
-                T.CF('pwa_error', e);
-            });
-            serviceWorker.on('message', async function (event) {
-                let data = event.data;
-                if (I.obj(data)) {
-                    let { action, from } = data;
-                    if (action) {
-                        if (I.str(action)) {
-                            if (action == 'GETDBNAME') {
-                                return T.docload(() => {
-                                    T.PostMessage({
-                                        action: 'WOKERDBNAME',
-                                        result: T.DB_NAME
-                                    })
-                                })
-                            }
-                            let result = await T.CF(action, data);
-                            if (data.id) {
-                                data.result = result;
-                                T.PostMessage(data);
-                            } else {
-                                T.PostMessage(result);
-                            }
-                        } else if (I.array(action)) {
-                            I.FM(action, (v) => [
-                                v, T[v] || win[v]
-                            ]);
-                        } else {
-                            console.log(data);
-                        }
-                    } else if (from) {
-                        console.log(data);
-                        T.CF(from, data);
-                    }
-                } else {
-                    console.log(data);
-                }
-            });
-            serviceWorker.ready.then(sw => sw && (sw.onstatechange = e => T.CF('pwa_statechange', e)));
-        }
         /*
         let ehtml = document.documentElement;
         if (!I.Attr(ehtml, "color-scheme")) {
