@@ -31,12 +31,10 @@
             <div class="wel-result"></div>
             <div class="wel-core-mod">
                 <h1>设置启动核心(默认mGBA)</h1>
-                <p>不同核心直接存在差异,例如水晶版切换核心会产生性别转换.因此非必要,修改后不要更改!vbanext仅仅支持gba,mgba支持所有,gb仅仅支持gbc/gb游戏.</p>
-                <p class="warning">gb和mgba的存档和状态不兼容的!<br>Github加载核心下载过慢!<br>请关闭并打开手游加速器加速外服游戏再打开.</p>
+                <p class="warning">下载过慢,请关闭并打开手游加速器加速外服游戏再打开.</p>
                 <button data-mod="vbanext">vbanext(原版本)</button>
                 <button data-mod="mgba">mgba</button>
                 <button data-mod="gb">gb</button>
-                <p>核心编译来源<a href="//emulatorjs.com">emulatorjs.com</a> 0.5.8版本,可正常使用加速一倍,经过本人魔改RTC,金手指</p>
             </div>
         </div>
         <div class="wel-start" hidden>
@@ -56,8 +54,17 @@
                 <p>没有游戏请导入手机中游戏.百度网盘的压缩文件请改名pdf用打开方式存储到手机,然后导入该pdf.</p>
             </div>
         </div>
-        <p>全面翻新,与旧版不同,默认运行载入电子存档,而不是旧版的载入状态.不再用屎山代码,采用一条龙直写,欢迎在Github fork!</p>
-        <p>即时存档统一称为"状态",而普通存档称为电子存档.</p>
+        <div class="wel-about">
+            <h3>说明</h3>
+            <p>1.默认运行自动载入保存的电子存档,而不是旧版的自动载入状态.欢迎在Github fork in github:<a href="https://github.com/nenge123/vba_next_wasm">nenge123/vba_next_wasm</a></p>
+            <p>2.即时存档统一称为"状态",而普通存档称为电子存档.即存指即时保存状态,点击时有明显变色.即读是读取保存的即时状态</p>
+            <p>3.状态备份,是备份不同即时状态,不影响主界面的"即存"</p>
+            <p>4.核心说明,mgba支持所有,但是某些rom不要使用bios.gb核心仅仅支持gb/gbc,怀念屎绿(配色选DMG green)的朋友很适合.gb虽然支持sgb,但是彩色效果不如mgba(例如kof96).vbanext仅仅支持gba,打不打bios影响不大.</p>
+            <p>5.存档问题,不同核心存档不能正常共通.例如电脑的VBA模拟器gb/gbc,64kb存档可以在mgba中正常读取.128kb的gba原则上可以在vbanext/mgba正常读取.</p>
+            <p>6.金手指添加后需要点击"启用"才会写入,如果需要关闭,只能点击"重置",再开启你需要的.</p>
+            <p>7.RTC魔改问题,一旦使用分变秒等,改回来可能造成时间错乱概不负责.因为我只做了乘法运算.</p>
+            <p>核心编译来源<a href="//emulatorjs.com">emulatorjs.com</a> 0.5.8版本,本代码免费使用,欢迎自行修改应用到你的网站,或者在github复制后,锁定某游戏启动.有什么问题欢迎到<b>nenge123/vba_next_wasm</b>提交建议或者斧正代码.</p>
+        </div>
     </div>
     <div class="gba-body" hidden>
         <canvas class="gba-pic" width="600" height="400"></canvas>

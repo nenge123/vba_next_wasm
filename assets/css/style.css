@@ -27,6 +27,16 @@ img{
     margin: 0px auto;
     max-width: 100vw;
 }
+.wel-about{
+    text-align: left;text-align: left;
+    text-shadow: 0 0 1px black;
+    font-size: 1rem;
+    padding: 20px;
+    color: #d5ffa0;
+}
+.wel-about a{
+    color: #fff;
+}
 .wel-index button{
     margin: 5px;
     outline: none;
@@ -627,7 +637,11 @@ img{
     font-size: 1rem;
 }
 .state-tips{
-    color: #1777af;font-size: 1rem;font-weight: unset;
+    padding: 20px;
+    color: #8fff00;
+    font-size: 1rem;
+    font-weight: bold;
+    text-shadow: 0px 0px 2px #000000;
 }
 canvas {
     display: block;

@@ -831,22 +831,23 @@ audio_latency = "256"`);
             /**设置 数据库管理 */
             var VBA = this;
             $('.wel-index').hidden = !1;
-            $('.wel-index').style.cssText='color: #3643e9;font-size: 1rem;font-weight: bold;text-shadow: 2px 2px 3px #8b7b7b;';
             if (this.isIPhone && !this.isstandalone) {
                 /**
                  * 阻止苹果手机浏览器
                  */
-                $('.wel-index').innerHTML = '<p style="color:red">检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".</p>';
+                $('.wel-index').classList.add('state-tips');
+                $('.wel-index').style.color = '#e1ff00';
+                $('.wel-index').innerHTML = '检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".';
                 return;
             }
             if (VBA.isPWA) {
                 if (!navigator.serviceWorker.controller) {
-                    $('.wel-index').innerHTML = 'serviceWorker 未完全加载!稍后替你刷新页面';  
+                    $('.wel-index').classList.add('state-tips');
+                    $('.wel-index').innerHTML = 'serviceWorker 未完全加载!<br>稍后替你刷新页面!<br>核心下载过慢可以打开手游加速器,毕竟Github服务器在国内容易大姨妈';  
                     setTimeout(e=>location.reload(),5000);
                     return;
                 }
             }
-            $('.wel-index').removeAttribute('style');
             /**
              * 数据库管理事件
              */
