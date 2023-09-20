@@ -840,7 +840,7 @@ audio_latency = "256"`);
                 return;
             }
             if (VBA.isPWA) {
-                if (!await navigator.serviceWorker.ready) {
+                if (!navigator.serviceWorker.controller) {
                     $('.wel-index').innerHTML = 'serviceWorker 未完全加载!稍后替你刷新页面';  
                     setTimeout(e=>location.reload(),5000);
                     return;
