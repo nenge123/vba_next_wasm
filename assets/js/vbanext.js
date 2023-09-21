@@ -1505,7 +1505,6 @@ audio_latency = "256"`);
             if (ctrlset && I.str(ctrlset)) {
                 ctrlset = JSON.parse(ctrlset);
             }
-            console.log(ctrlElm);
             ToArr(ctrlElm, entry => {
                 var [id, [keyelm, padelm]] = entry;
                 ctrlbase[id] = [keyelm.value, padelm.value];

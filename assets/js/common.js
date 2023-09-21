@@ -29,13 +29,12 @@
         addEventListener,
         removeEventListener,
         CSSStyleDeclaration,
+        NamedNodeMap,
         Date,
         Event,
         CustomEvent,
-        ErrorEvent,
         JSON,
         indexedDB,
-        IDBRequest,
         undefined,
         DOMParser,
         prompt,
@@ -1166,7 +1165,7 @@
                         if(key)b[key] = value;
                         else a.push(value);
                     }else if(value){
-                        if(value instanceof Node&&value.name){
+                        if(value.nodeType===2){
                             b[value.name] = value.value;
                         }else{
                             a.push(value);
