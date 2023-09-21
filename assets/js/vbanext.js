@@ -1505,6 +1505,7 @@ audio_latency = "256"`);
             if (ctrlset && I.str(ctrlset)) {
                 ctrlset = JSON.parse(ctrlset);
             }
+            console.log(ctrlElm);
             ToArr(ctrlElm, entry => {
                 var [id, [keyelm, padelm]] = entry;
                 ctrlbase[id] = [keyelm.value, padelm.value];
@@ -1671,7 +1672,7 @@ audio_latency = "256"`);
 
         }
         setTouchKey() {
-            if(I.hasOwnProp(HTMLElement,'ontouchstart')){
+            if(!I.hasOwnProp(HTMLElement,'ontouchstart')){
                 $('.gba-mobile-ctrl').hidden = !0;
                 $('.gba-options-base button[data-act="pad"]').hidden = !0;
                 $('.gba-options-base button[data-act="arrow"]').hidden = !0;

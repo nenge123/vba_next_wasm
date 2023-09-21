@@ -1166,7 +1166,7 @@
                         if(key)b[key] = value;
                         else a.push(value);
                     }else if(value){
-                        if(value instanceof Node){
+                        if(value instanceof Node&&value.name){
                             b[value.name] = value.value;
                         }else{
                             a.push(value);
