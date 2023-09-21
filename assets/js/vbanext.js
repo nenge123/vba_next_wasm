@@ -892,7 +892,7 @@ audio_latency = "256"`);
                             var yes = window.confirm('这是直接替换,不会自动解压,确定替换吗');
                             if (yes) {
                                 VBA.upload(files => Store.get(key).then(async result => {
-                                    result.contents = await I.U8(files[0]);
+                                    result.contents = await I.toU8(files[0]);
                                     Store.put(result, key).then(v => alert('替换成功' + v))
                                 }));
                             }
@@ -1024,8 +1024,7 @@ audio_latency = "256"`);
                             div.remove();
                             return;
                         }
-                        VBA.upload(files =>
-                            ToArr(files).map(async file => {
+                        VBA.upload(files =>ToArr(files).map(async file => {
                                 var div = document.createElement('div');
                                 var gamelist = $('.wel-game-list');
                                 var filename = file.name;
@@ -1119,17 +1118,19 @@ audio_latency = "256"`);
                 system = system == 'gba' ? 'gba' : 'gb';
                 MyTable('rooms').put({ contents: data, system, timestamp: new Date }, romsName);
                 Module.writeFile(romsName, data);
-                li.innerHTML = romsName + ' 已保存至数据库,点击运行';
+                li.innerHTML = romsName + ' <b>已保存至数据库,点击运行</b>';
                 li.dataset.rungame = romsName;
                 li.onclick = function () {
                     VBA.StartGame(this.dataset.rungame);
                 }
             }else if(/\.srm$/i.test(romsName)&&data.byteLength > 0x8000){
+                li.innerHTML = romsName + ' <b>检测到存档,已写入</b>';
                 VBA.Module.toWriteSaves(romsName,data)
             } else if(/\.state$/i.test(romsName)&&data.byteLength > 0x8000){
+                li.innerHTML = romsName + ' <b>检测到状态,已写入</b>';
                 VBA.Module.toWriteSaves(romsName,data)
             } else {
-                li.innerHTML = romsName + ' 非GBA后缀跳过';
+                li.innerHTML = romsName + ' <b>非GBA后缀跳过</b>';
 
             }
         }
@@ -1247,7 +1248,7 @@ audio_latency = "256"`);
                     VBA.saveSRM();
                 } else if (act == 'imports') {
                     VBA.upload(async files => {
-                        VBA.Module.toSaveSRM(await I.U8(files[0]));
+                        VBA.Module.toSaveSRM(await I.toU8(files[0]));
                         VBA.Module.toEventLoadSRM();
                         VBA.Module.toSysReset();
 
@@ -1379,14 +1380,12 @@ audio_latency = "256"`);
                         if (!title) return;
                         var value = $('.gba-cheat-edit textarea').value;
                         if (!value) return;
-                        if (keyname) {
-                            if (keyname != title) {
-                                delete VBA.cheats[keyname];
-                                $('.gba-cheat-list li[data-pos="' + pos + '"] span').innerHTML = `#${pos} ${title}`;
-                            } else {
-                                cheatItem([title, value], $(`.gba-options-cheat`).dataset.len, $('.gba-cheat-list'));
-                                $(`.gba-options-cheat`).dataset.len += 1;
-                            }
+                        if (keyname&&keyname != title) {
+                            delete VBA.cheats[keyname];
+                            $('.gba-cheat-list li[data-pos="' + pos + '"] span').innerHTML = `#${pos} ${title}`;
+                        } else {
+                            cheatItem(title, $(`.gba-options-cheat`).dataset.len);
+                            $(`.gba-options-cheat`).dataset.len += 1;
                         }
                         keyname = title;
                         VBA.cheats[keyname] = value;
@@ -1402,12 +1401,12 @@ audio_latency = "256"`);
 
                 }
             }
-            function cheatItem(value, key, result) {
+            function cheatItem(value, key) {
                 var div = document.createElement('li');
                 div.dataset.pos = key;
-                div.dataset.keyname = value[0];
+                div.dataset.keyname = value;
                 var span = document.createElement('span');
-                span.innerHTML = '#' + key + ' ' + value[0];
+                span.innerHTML = '#' + key + ' ' + value;
                 div.appendChild(span);
                 var optbtn = document.createElement('button');
                 var editbtn = document.createElement('button');
@@ -1418,10 +1417,12 @@ audio_latency = "256"`);
                 optbtn.dataset.act = 'open';
                 editbtn.dataset.act = 'edit';
                 deletebtn.dataset.act = 'del';
+
                 div.appendChild(optbtn);
                 div.appendChild(editbtn);
                 div.appendChild(deletebtn);
-                result.appendChild(div);
+                $$('button',div).forEach(elm => elm.on('pointerup', cheatButton));
+                $('.gba-cheat-list').appendChild(div);
             }
             VBA.GO_BUTTON('cheat', cheatButton);
             $(`.gba-options-cheat`).on('menuopen', async function (e) {
@@ -1431,7 +1432,7 @@ audio_latency = "256"`);
                     this.dataset.ready = !0;
                     VBA.cheats = VBA.Module.toReadCheat();
                     var cheatlist = ToArr(VBA.cheats);
-                    cheatlist.forEach((value, key) => cheatItem(value, key, $('.gba-cheat-list')));
+                    cheatlist.forEach((value, key) => cheatItem(value[0], key));
                     $$('.gba-cheat-list button').forEach(elm => elm.on('pointerup', cheatButton));
                     this.dataset.len = cheatlist.length;
                     $('.gba-cheat-edit textarea').on('click', async function (e) {
@@ -1440,7 +1441,7 @@ audio_latency = "256"`);
                         }
                     });
                     $('.gba-cheat-edit textarea').on('blur', async function (e) {
-                        this.value = this.value.replace(/[^0-9A-F\n\-\+\s\t]/g, '').trim();
+                        this.value = this.value.toUpperCase().replace(/[^0-9A-F\n\-\+\s\t]/g, '').trim();
                     });
 
                 }
@@ -1670,7 +1671,7 @@ audio_latency = "256"`);
 
         }
         setTouchKey() {
-            if(document.ontouchstart===undefined){
+            if(I.hasOwnProp(HTMLElement,'ontouchstart')){
                 $('.gba-mobile-ctrl').hidden = !0;
                 $('.gba-options-base button[data-act="pad"]').hidden = !0;
                 $('.gba-options-base button[data-act="arrow"]').hidden = !0;
@@ -1772,9 +1773,6 @@ audio_latency = "256"`);
             ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(v=>$('.gamepad-bottom').on(v,touchEvent));
             $('.gamepad-top').dataset.id = 'lr';
             ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(v=>$('.gamepad-top').on(v,touchEvent));
-            if (!T.mobile) {
-                $('button[data-act="pad"]').click();
-            }
         }
         GO_HomeEvent(name) {
             var VBA = this;
@@ -1926,20 +1924,20 @@ audio_latency = "256"`);
                  * @returns 
                  */
                 pwa_install(d){
-                    console.log(d);
+                    console.log(d.type);
                 },
                 pwa_activate(d){
-                    console.log(d);
+                    console.log(d.type);
                     //setTimeout(e=>location.reload(),1000);
                 },
                 pwa_error(d){
-                    console.log(d);
+                    console.log(d.type);
                 },
                 pwa_updatefound(d){
-                    console.log(d);
+                    console.log(d.type);
                 },
                 pwa_statechange(d){
-                    console.log(d);
+                    console.log(d.type);
                 },
                 /**
                  * PWA回调函数 pack=getcore

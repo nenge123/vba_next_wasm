@@ -60,7 +60,7 @@
         constructor() {
             super();
             const C = this;
-            C.ElmName = I.UC("TAG_" + C.tagName.replace(/-/g, "_"));
+            C.ElmName = I.toUp("TAG_" + C.tagName.replace(/-/g, "_"));
             C.getFunc("INIT");
         }
         getFunc(name, o) {
@@ -297,9 +297,9 @@
                                 let newresult = await DB.load(read, newkey);
                                 return newresult.contents;
                             }));
-                            contents = I.File(contents, filename || name, filetype, result.timestamp);
+                            contents = I.File(contents, filename || name, filetype);
                             if (type != File.name) {
-                                contents = await I.U8(contents);
+                                contents = await I.toU8(contents);
                             }
                         }
                     }
@@ -347,7 +347,7 @@
                                 newkey += T.part + k;
 
                             var pos = k * T.maxsize;
-                            var newcontens = await I.U8(contents.slice(pos, filesize - pos >= T.maxsize ? pos + T.maxsize : filesize));
+                            var newcontens = await I.toU8(contents.slice(pos, filesize - pos >= T.maxsize ? pos + T.maxsize : filesize));
                             return DB.save(write, Object.assign({
                                 contents: newcontens,
                                 filesize,
@@ -601,7 +601,7 @@
             contents = await CT.steam(response, headers);
             filesize = contents.size;
             if (type != I.L(Blob)) {
-                contents = await I.U8(contents);
+                contents = await I.toU8(contents);
                 if (this.Filter) {
                     contents = await this.Filter(contents, urlname, headers);
                 } else if (type) {
@@ -621,7 +621,7 @@
             } else {
                 type = File.name;
             }
-            option = I.assign(option, {
+            option = Object.assign(option||{}, {
                 timestamp: T.date,
                 filename: filename,
                 filesize: filesize,
@@ -742,7 +742,7 @@
                 this.onprogress(current, length, this.downText + filename);
                 chunks.push(value);
             }
-            return I.File(chunks, filename, type, headers["last-modified"]);
+            return I.File(chunks, filename, type);
         }
         reBuf(data, unbuf, name, ftype) {
             if (unbuf == T.ts[0])
@@ -766,26 +766,28 @@
             let data = {
                 headers: headers || {}
             };
-            I.exends(data, head);
+            Object.assign(data,head);
             if (json) {
                 post = I.toJson(ARG.json);
                 data.headers.Accept = F.getMime(T.ts[1]);
             } else if (post) {
-                post = I.post(ARG.post);
+                post = I.toPost(ARG.post);
             }
             if (post) {
                 data.method = "POST";
                 data.body = post;
             }
-            return fetch(I.get(url, get), data).catch(err => {
+            return fetch(I.toGet(url, get), data).catch(err => {
                 this.statusText = err;
             });
         }
     }
     class Decompress extends EventTarget {
+        src7z = "extract7z.zip";
+        srcrar = "libunrar.min.zip";
         constructor(ARG) {
             super();
-            if (!I.obj(ARG))
+            if (!I.obj(ARG) && (I.buf(ARG) || I.blob(ARG)))
                 this.contents = ARG;
             else
                 Object.assign(this, ARG);
@@ -799,7 +801,7 @@
                     this.success && this.success(detail)
                 })
             });
-            this.ondone();
+            if (this.contents) this.ondone();
 
         }
         async ondone() {
@@ -810,7 +812,8 @@
             if (!ext) {
                 ext = await F.CheckExt(contents);
             }
-            var result = /(zip|rar|7z)$/.test(ext) && (/zip$/.test(ext) && await this.zip() || await this.rar(ext) || await this.extractor(ext)) || await I.U8(contents);
+            /** || await this.extractor(ext) */
+            var result = /(zip|rar|7z)$/.test(ext) && (/zip$/.test(ext) && await this.zip() || await this.rar(ext)) || await I.toU8(contents);
             this.toEvent(evtname[0], result);
         }
         async extractor(ext) {
@@ -836,7 +839,7 @@
                         } else if (end) {
                             I.Async(I.toArr(result).map(async entry => {
                                 var [file, data] = entry;
-                                return [file, data.length ? await I.U8((new Blob(data))) : new Uint8Array()];
+                                return [file, data.length ? await I.toU8((new Blob(data))) : new Uint8Array()];
                             })).then(arr => {
                                 arr = arr.length ? I.toObj(arr) : undefined;
                                 re(arr);
@@ -871,14 +874,14 @@
             });
         }
         async rar(ext) {
-            var src = T.unrarsrc;
-            if (ext && /7z$/.test(ext)) src = T.un7zsrc;
             var {
                 contents,
                 password,
-                onprogress
+                onprogress,
+                src7z, srcrar
             } = this;
-            contents = await I.U8(contents);
+            var src = ext && /7z$/.test(ext) ? src7z : srcrar;
+            contents = await I.toU8(contents);
             let url = await F.getLibjs(src, onprogress);
             return I.Async(complete => {
                 let result, worker = new Worker(url),
@@ -976,228 +979,337 @@
             if (!I.empty(entrylist)) return await this.getEntries(entrylist);
         }
     }
-    const I = new class NengeType {
-        constructor() {
-            let I = this;
-            Object.assign(I, {
-                O: (a) => (I.CS(a) == Number ? I[a] : a),
-                B: (o, a) => o && o.bind(a),
-                IF: (o, a) => o instanceof I.O(a),
-                IC: (o, a) => I.CS(o) === I.O(a),
-                TP: (o) => typeof o,
-                N: (o) => (
-                    (o = I.O(o)) && o.name
-                ) || (I.CS(o) && I.CS(o).name) || I.TP(o),
-                NC: (o) => I.LC(I.N(o)),
-                R: (o, ...a) => Reflect.construct(I.O(o), a),
-                H: (o, a) => (a && o.hasOwnProperty(a)) || false,
-                L: (o) => (
-                    ((o = I.O(o)) && I.ST(o)) || I.N(o) || I.TS(o)
-                ).replace(/^(\w)/, (re) => I.LC(re)),
-                C: (o) => I.CS(I.O(o)),
-                CS: (o) => o != null && o != undefined && o.constructor,
-                CP: (o) => (o != null && o != undefined && o.prototype) || o,
-                DP: (o, a) => Reflect.deleteProperty(o, a),
-                FE: (o, f) => (f && o.forEach && o.forEach(f)) || o,
-                FM: (o, f) => (f && o.map && o.map(f)) || o,
-                TS: (o) => o.toString(),
-                NN: (o) => I.LC(o.nodeName),
-                ST: (o) => I.LC(o[Symbol.toStringTag] || ""),
-                LC: (o) => o && o.toLowerCase(),
-                UC: (o) => o && o.toUpperCase(),
-                dE: (o) => (o || document).documentElement,
-                dElm: (o, a) => I.dE(new DOMParser().parseFromString(o, a)),
-                elm: (o) => I.IF(o, HTMLElement),
-                node: (o) => I.IF(o, Node),
-                nodelist: (o) => I.IF(o, NodeList),
-                isDoc: (o) => I.IF(o, Document),
-                await: (o) => I.IF(o, Promise),
-                blob: (o) => I.IF(o, Blob),
-                file: (o) => I.IF(o, File),
-                evt: (o) => I.IF(o, Event),
-                keyevt: (o) => I.IF(o, KeyboardEvent),
-                func: (o) => I.IF(o, Function) && !I.isClass(o),
-                isClass: (o) => /^class\s/.test(Function.prototype.toString.call(o)),
-                array: (o) => Array.isArray(o),
-                obj: (o) => I.IC(o, Object),
-                buf: (o) => I.IC(o, ArrayBuffer),
-                u8obj: (o) => I.IC(o, Uint8Array),
-                u8buf: (o) => I.u8obj(o),
-                str: (o) => I.IC(o, String),
-                toURL: (o) => URL.createObjectURL(o),
-                reURL: (o) => URL.revokeObjectURL(o),
-                bool: (o) => I.IC(o, Boolean),
-                num: (o) => I.IC(o, Number),
-                null: (o) => o === null,
-                none: (o) => I.TP(o) == I.TP(),
-                nil: (o) => I.null(o) || I.none(o),
-                Arr: (o) => new Array(o),
-                ArrFrom: (o) => Array.from(o),
-                U8: (o) => I.u8buf(o) ? o : I.blob(o) ? I.Async(async (re) => re(I.U8(await o[I.L(ArrayBuffer)]()))) : new Uint8Array(o.buffer || o),
-                Buf16str: (o) => I.toArr(o).map((v) => I.To16(v)).join(""),
-                To16: (o) => o.toString(16).padStart(2, 0).toLocaleUpperCase(),
-                ArrTest: (o, a) => I.toArr(o).filter((entry) => entry[1].test(a))[0],
-                decode: (o, a) => new TextDecoder(a).decode(o),
-                encode: (o) => new TextEncoder().encode(o),
-                isForm: (o) => I.IF(o, FormData),
-                setForm: (o) => new FormData(o),
-                setParam: (o) => new URLSearchParams(o),
-                Int: (o) => I.IntVal(o),
-                IntVal: (o, a) => parseInt(o, a),
-                PER: (o, ...a) => I.Int(
-                    (100 * o) / a[0]
-                ).toFixed(0) + (!a[1] ? "%" : ""),
-                Async: (o, b) => I.array(o) ? b ? Promise.allSettled(o) : Promise.all(o) : I.func(o) ? new Promise(o) : null,
-                $: (o, a) => (a || document).querySelector(o) || undefined,
-                $$: (o, a) => (a || document).querySelectorAll(o) || undefined,
-                $c: (o) => document.createElement(o),
-                RegRe: (o, a) => (I.toArr(a, (e) => (o = o.replace(new RegExp(`{${e[0]
-                    }}`, "g"), e[1]))) && 0) || o,
-                setStyle: (o, a) => (I.toArr(a, (x) => I.reProp(o.style || o, x[0], x[1])) && 0) || o,
-                getAttr: (o, a) => I.B(I.CP(Element).getAttribute, o)(a),
-                setAttr: (o, a, b) => b ? I.B(I.CP(Element).setAttribute, o)(a, b) : I.getAttr(o, a),
-                reAttr: (o, a, b) => I.nil(b) ? I.B(I.CP(Element).removeAttribute, o)(a) : I.setAttr(o, a, b),
-                getProp: (o, a) => I.B(I.CP(CSSStyleDeclaration).getPropertyValue, o)(a),
-                setProp: (o, a, b) => b ? I.B(I.CP(CSSStyleDeclaration).setProperty, o)(a, b) : I.getProp(o, a),
-                reProp: (o, a, b) => b ? I.setProp(o, a, b) : I.B(I.CP(CSSStyleDeclaration).removeProperty, o)(a),
-                Attr: (o, ...a) => I.obj(a[0]) ? I.toArr(a[0], (v) => I.Attr(o, v[0], v[1])) : a[0] ? I.setAttr(o, ...a) : I.toObj(o.attributes),
-                Call: (o, ...a) => Reflect.apply(o, a.shift(), a),
-                Apply(o, a, b) {
-                    if (I.str(o) && b)
-                        o = b[o];
-
-                    return I.func(o) && Reflect.apply(o, b, a);
-                },
-                EachNext: (o, a) => !(a = []) || I.Next(o, (s) => a.push(I.num(s[0]) ? s[1] : s)) || a,
-                Next(o, fn) {
-                    if (o.entries)
-                        o = o.entries();
-
-                    let v = o.next();
-                    while (!v.done) {
-                        fn(v.value);
-                        v = o.next();
+    const I = {
+        IF: (o, a) => o instanceof a,
+        IC: (o, a) => I.CS(o) === a,
+        TP: o => typeof o,
+        N: o => o.name|| (I.CS(o) && I.CS(o).name) || I.TP(o),
+        NC: o => I.toLow(I.N(o)),
+        R: (o, ...a) => Reflect.construct(o, a),
+        L: o => (
+            I.ST(o) || I.N(o) || I.toStr(o)
+        ).replace(/^(\w)/, (re) => I.toLow(re)),
+        C: o => I.CS(o),
+        CS: o => !I.nil(o)&& o.constructor,
+        DP: (o, a) => Reflect.deleteProperty(o, a),
+        FE: (o, f) => (f && o.forEach && o.forEach(f)) || o,
+        FM: (o, f) => (f && o.map && o.map(f)) || o,
+        NN: o => I.toLow(o.nodeName),
+        ST: o => I.toLow(o[Symbol.toStringTag] || ""),
+        dE: o => (o || document).documentElement,
+        dElm: (o, a) => I.dE(new DOMParser().parseFromString(o, a)),
+        elm: o => I.IF(o, HTMLElement),
+        node: o => I.IF(o, Node),
+        nodelist: o => I.IF(o, NodeList),
+        isDoc: o => I.IF(o, Document),
+        await: o => I.IF(o, Promise),
+        blob: o => I.IF(o, Blob),
+        file: o => I.IF(o, File),
+        evt: o => I.IF(o, Event),
+        keyevt: o => I.IF(o, KeyboardEvent),
+        func: o => I.IF(o, Function) && !I.isClass(o),
+        isClass: o => /^class\s/.test(I.toStr(o.constructor)),
+        array: o => Array.isArray(o),
+        obj: o => I.IC(o, Object),
+        buf: o => I.IC(o && o.buffer || o, ArrayBuffer),
+        u8obj: o => I.IC(o, Uint8Array),
+        u8buf: o => I.u8obj(o),
+        str: o => I.IC(o, String),
+        toURL: o => URL.createObjectURL(o),
+        reURL: o => URL.revokeObjectURL(o),
+        bool: o => I.IC(o, Boolean),
+        num: o => I.IC(o, Number),
+        null: o => o === null,
+        none: o => I.TP(o) == I.TP(),
+        nil: o => I.null(o) || I.none(o),
+        Arr: o => new Array(o),
+        ArrFrom: o => Array.from(o),
+        /**
+         * 对象原型
+         * @param {Object} o 对象 
+         * @returns {prototype}
+         */
+        Proto:o=>!I.nil(o)&&o.prototype,
+        /**
+         * 原型属性
+         * @param {Object} o 对象 
+         * @param {*} p 属性/方法
+         * @returns {Boolean}
+         */
+        hasOwnProp:(o,p)=>I.hasProp(I.Proto(o),p),
+        /**
+         * 是否含有属性
+         * @param {Object} o 对象
+         * @param {String} p 属性/方法
+         * @returns {Boolean}
+         */
+        hasProp:(o,p)=>o.hasOwnProperty(p),
+        /**
+         * 转化为ArrayBuffer
+         * @param {Blob} o 
+         * @returns {ArrayBuffer|Promise}
+         */
+        toBuf: o => o.arrayBuffer(),
+        /**
+         * blob转换Uint8Array
+         * @param {Blob} o
+         * @returns {Promise<Uint8Array>}
+         */
+        Blob2U8:async o=>I.toU8(await I.toBuf(o)),
+        /**
+         * {async}
+         * 转化为Uint8Array
+         * @param {ArrayBuffer|Blob} o
+         * @returns {Uint8Array|Promise<Uint8Array>}
+         */
+        toU8: o => I.u8buf(o) ? o : I.blob(o) ? I.Blob2U8(o) : new Uint8Array(o.buffer || o),
+        U8:o=>I.toU8(o),
+        /**
+         * 打印字符
+         * @param {any} o 
+         * @param {number|null} a 参数
+         * @returns {String}
+         */
+        toStr:(o,a)=>o.toString(a),
+        /**
+         * 大写
+         * @param {String} o 
+         * @returns {String}
+         */
+        toUp:o=>o&&o.toUpperCase(),
+        /**
+         * 小写
+         * @param {String} o 
+         * @returns {String}
+         */
+        toLow:o=>o&&o.toLowerCase(),
+        /**
+         * 解码二进制
+         * @param {Uint8Array} o 
+         * @param {String} a 编码,默认utf8
+         * @returns {String}
+         */
+        decode: (o, a) => new TextDecoder(a).decode(o),
+        /**
+         * 编码为二进制
+         * @param {String} o 
+         * @returns {Uint8Array}
+         */
+        encode: o => new TextEncoder().encode(o),
+        isForm: o => I.IF(o, FormData),
+        setForm: o => new FormData(o),
+        setParam: o => new URLSearchParams(o),
+        Int: o => I.IntVal(o),
+        IntVal: (o, a) => parseInt(o, a),
+        PER: (o, ...a) => I.Int(
+            (100 * o) / a[0]
+        ).toFixed(0) + (!a[1] ? "%" : ""),
+        /**
+         * 返回一个异步对象Promise
+         * @param {Function|Array<Function>} o 异步函数或异步函数组 
+         * @param {Boolean} b 是否采用 allSettled
+         * @returns {Promise<value>|Promise<Array<value>>}
+         */
+        Async: (o, b) => I.array(o) ? b ? Promise.allSettled(o) : Promise.all(o) : I.func(o) ? new Promise(o) : Promise.resolve(),
+        /**
+         * 设置内联样式
+         * @param {*} o 
+         * @param {*} a 
+         * @returns 
+         */
+        setStyle: (o, a) => (I.toArr(a, x=>(o.style || o).setProperty(x[0], x[1])) && 0) || o,
+        /**
+         * 获取内联样式
+         * @param {*} o 
+         * @returns 
+         */
+        getStyle:o=>I.EachItem(o.style || o),
+        /**
+         * 获取HTML对象属性
+         * @param {*} o 
+         * @returns 
+         */
+        getAttr: o => I.EachItem(o.attributes || o),
+        /**
+         * 设置HTML属性
+         * @param {*} o 
+         * @param {*} a 
+         * @returns 
+         */
+        setAttr:(o, a) => (I.toArr(a, x=>(o.style || o).setAttribute(x[0], x[1])) && 0) || o,
+        /**
+         * 执行函数
+         * @param {*} o 
+         * @param  {...any} a 
+         * @returns 
+         */
+        toApply(o,...a){
+            return o&&Reflect.apply(o, a.shift(), a);
+        },
+        /**
+         * 打印数据对象
+         * @param {Object} o 
+         * @param {Boolean} k 
+         * @returns {Array<String>|Array<Array>|JSON}
+         */
+        EachItem(o,k){
+            var a=[],b={};
+            if(I.str(o)){
+                a = Array.from(o);
+            }else if(o.forEach){
+                k===!0?o.forEach(v=>a.push(v)):o.forEach((v,i)=>I.array(v)&&v.length==2?b[v[0]] = v[1]:b[i]=v);
+            }else if(o.item){
+                for (let i = 0; i < o.length; i++) {
+                    var value = o.item(i);
+                    if(I.str(value)){
+                        var key = I.toApply(o.getPropertyValue,o,value);
+                        if(key)b[key] = value;
+                        else a.push(value);
+                    }else if(value){
+                        if(value instanceof Node){
+                            b[value.name] = value.value;
+                        }else{
+                            a.push(value);
+                        }
                     }
-                },
-                inArr: (o, ...a) => I.Item(a, (v) => o.includes(v)) || !1,
-                inClass: (o, ...a) => I.Item(a, (v) => I.IF(v, o)) || !1,
-                Item(o, fn) {
-                    for (let i = 0; i < o.length; i++) {
-                        let re = fn((o.item && o.item(i)) || o[i]);
-                        if (re)
-                            return re;
-
+                }
+            }else if(I.func(o.entries)){
+                    var c = o.entries();
+                    while (!0) {
+                        var data = c.next();
+                        if(data.done)break;
+                        if(I.array(data.value)){
+                            var [key,value] = data.value;
+                            if(!k)b[key] = value;
+                            else I.num(key)?a.push(value):a.push(data.value);
+                        }else{
+                            a.push(data.value);
+                        }
                     }
-                },
-                EachItem: (o, a) => !(a = []) || I.Item(o, (v) => {
-                    if (I.IF(o, CSSStyleDeclaration))
-                        a.push([
-                            v, I.getProp(o, v)
-                        ]);
-                    else if (v.value)
-                        a.push([v.name, v.value]);
-                    else
-                        a.push(v);
 
-                }) || a,
-                EachValue: (o, a) => !(a = []) || !I.FE(o, (v, k) => a.push([k, v])) || a,
-                FromEntries(o) {
-                    return Object.fromEntries(I.toArr(o).map((s, k) => !I.array(s) || s.length != 2 ? [k, s] : s));
-                },
-                getEntries(o) {
-                    if (I.obj(o)) {
-                        return I.Entries(o);
-                    } else if (I.num(o) || o.byteLength) {
-                        return I.ArrFrom(I.U8(o.buffer || o));
-                    } else if (I.func(o.entries)) {
-                        return I.EachNext(o);
-                    } else if (o.item) {
-                        return I.EachItem(o);
-                    }
-                    return I.ArrFrom(o);
-                },
-                Entries: (o, f) => I.FE(Object.entries(o), f),
-                toJson: (post) => JSON.stringify(I.Json(post)),
-                define: (o, p, attr, bool, rw) => Object.defineProperty(o, p, !bool ? attr : {
-                    get: I.func(attr) ? attr : () => attr,
-                    configurable: rw == !0
-                }),
-                defines: (o, attr, bool, rw) => bool ? I.toArr(attr, (entry) => I.define(o, entry[0], entry[1], 1, rw)) : Object.defineProperties(o, attr),
-                AsyncTry: (fn, error) => I.Async(async (re) => {
-                    fn().catch(async (e) => {
-                        if (error(e))
-                            return re(null);
+            }
+            if(k===!0)b=Object.entries(b);
+            return a.length?k===!1?Object.fromEntries(a.map((v,i)=>!I.array(v) || v.length != 2 ? [i,v] :v)):a:b;
+        },
+        getEntries(o) {
+            return I.array(o)?o:I.obj(o)?Object.entries(o):I.num(o) || o.byteLength?I.ArrFrom(I.toU8(o.buffer || o)) :I.EachItem(o,!0);
+        },
+        /**
+         * 设置对象属性
+         * @param {*} o 
+         * @param {*} p 
+         * @param {*} attr 
+         * @param {*} bool 
+         * @param {*} rw 
+         * @returns 
+         */
+        define: (o, p, attr, bool, rw) => Object.defineProperty(o, p, (!bool || I.obj(attr) && attr.value) ? attr : {
+            get: I.func(attr) ? attr : () => attr,
+            configurable: rw == !0
+        }),
+        /**
+         * 设置对象多个属性
+         * @param {*} o 
+         * @param {*} attr 
+         * @param {*} bool 
+         * @param {*} rw 
+         * @returns 
+         */
+        defines: (o, attr, bool, rw) => bool ? I.toArr(attr, (entry) => I.define(o, entry[0], entry[1], 1, rw)) : Object.defineProperties(o, attr),
+        /**
+         * 判断数据值是否为空
+         * @param {Array|String|JSON|Boolean} data 
+         * @returns {Boolean}
+         */
+        empty(data) {
+            if (!data || data == !1)
+                return !0;
+            else if (I.str(data))
+                return data.trim().length == 0;
 
-                        re(await I.AsyncTry(fn, error));
-                    }).then((result) => re(result));
-                }),
-                assign(...a) {
-                    if (I.array(a[0]))
-                        a = [].concat(...a);
+            return I.toArr(data).length == 0;
+        },
+        /**
+         * 字符串变为JSON
+         * @param {String} post 
+         * @returns {JSON}
+         */
+        Json(post) {
+            if (I.u8buf(post))
+                post = I.decode(post);
 
-                    return Object.assign({}, ...a);
-                },
-                exends: (o, a, b) => b ? (I.toArr(b, (v) => (o[v] = a[v])) && 0) || a : Object.assign(o, a),
-                empty(data) {
-                    if (!data || data == !1)
-                        return !0;
-                    else if (I.str(data))
-                        return data.trim().length == 0;
-
-                    return I.toArr(data).length == 0;
-                },
-                Json(post) {
-                    if (I.u8buf(post))
-                        post = I.decode(post);
-
-                    return I.str(post) ? new Function("return " + post)() : post;
-                },
-                progress(fn, ...a) {
-                    if (fn) {
-                        a[0] += " " + I.PER(a[1], a[2]);
-                        return I.Apply(fn, a, a[3]);
-                    }
-                },
-                File: (o, n, type, d) => new File(o, n, {
-                    type,
-                    lastModified: d && I.Date(d).getTime()
-                }),
-                Date: (o) => new Date(I.IntVal(o) || o)
-            });
-        }
-        post(obj) {
-            let post = I.isForm(obj) ? obj : I.setForm(I.elm(obj) ? obj : I.str(obj) ? I.$(obj) : undefined);
+            return I.str(post) ? new Function("return " + post)() : post;
+        },
+        /**
+         * 转换JSON为字符串
+         * @param {JSON} post 
+         * @returns {String}
+         */
+        toJson: (post) => JSON.stringify(I.Json(post)),
+        progress(fn, ...a) {
+            if (fn) {
+                a[0] += " " + I.PER(a[1], a[2]);
+                fn&&fn.apply(a[3],a);
+            }
+        },
+        /**
+         * 创建一个文件
+         * @param {Array<Blob|Uint8Array|String>} o 
+         * @param {String} n 文件名
+         * @param {String} type mime
+         * @returns {File}
+         */
+        File: (o, n, type) => new File(o, n, {
+            type,
+            lastModified: Date.now()
+        }),
+        /**
+         * 处理POST数据
+         * @param {FormData|HTMLFormElement|JSON} obj 
+         * @returns {FormData}
+         */
+        toPost(obj) {
+            let post = I.isForm(obj) ? obj : I.setForm(I.elm(obj) ? obj : I.str(obj) ? T.$(obj) : undefined);
             if (I.obj(obj))
                 I.toArr(obj, (v) => post.append(v[0], v[1]));
 
             return post;
-        }
-        get(url, ...arg) {
+        },
+        /**
+         * 合拼URL参数
+         * @param {String} url 
+         * @param  {Array<String>} arg 
+         * @returns {String}
+         */
+        toGet(url, ...arg) {
             let urlsearch = url.split("?"),
                 urls = (urlsearch[1] && urlsearch[1].split("#")[0]) || "",
                 data = I.toArr(I.toObj(I.setParam(urls + "&" + arg.map((v) => (I.obj(v) ? I.setParam(v) : v)).join("&")))).map((v) => v[0] + "=" + v[1]).join("&").replace(/=&/g, "&");
             return urlsearch[0] + (data ? "?" + data : "");
-        }
-        toObj(obj) {
-            if (!obj)
-                return {};
-
-            return I.obj(obj) ? obj : I.FromEntries(obj);
-        }
+        },
+        /**
+         * 转换对象为JSON
+         * @param {Object} o 
+         * @returns {JSON}
+         */
+        toObj(o) {
+            return I.obj(o) ? o : I.EachItem(o,!1);
+        },
+        /**
+         * 转换为数组
+         * @param {Object} obj 
+         * @param {Function|null} func 回调函数
+         * @returns {Array<value>}
+         */
         toArr(obj, func) {
-            if (!obj)
-                return [];
-
+            if (!obj)return [];
             let arr = I.getEntries(obj);
-            if (I.func(func))
-                return I.FE(arr, func);
-
-            return arr;
+            return I.func(func) ?I.FE(arr, func):arr;
         }
     };
-    const F = new class NengeUtil {
-        Libjs = {};
-        ext16 = {
+    const F = {
+        Libjs: {},
+        ext16: {
             "7z": /^377ABCAF271C/,
             rar: /^52617221/,
             zip: /^504B0304/,
@@ -1207,8 +1319,8 @@
             webp: /^52494646\w{8}57454250/,
             pdf: /^255044462D312E/,
             bmp: /^424D\w{4}0{8}/
-        };
-        exttype = {
+        },
+        exttype: {
             "text": [
                 "css",
                 "scss",
@@ -1239,20 +1351,20 @@
             "application": [
                 "pdf",
                 "json",
-                ["js","javascript"],
+                ["js", "javascript"],
                 ["*", "octet-stream"],
                 ["zip", "x-zip-compressed"],
                 ["rar", "x-rar-compressed"],
                 ["7z", "x-7z-compressed"],
             ]
-        };
+        },
         CheckExt(u8) {
             let buf = u8.slice(0, 16);
-            let text = I.blob(buf) ? I.U8(buf) : I.str(buf) ? I.encode(buf) : buf;
+            let text = I.blob(buf) ? I.toU8(buf) : I.str(buf) ? I.encode(buf) : buf;
             return I.await(text) ? I.Async(async (e) => {
                 e(F.mimeHead(await text));
             }) : F.mimeHead(text);
-        }
+        },
         async getLibjs(jsfile, progress, version, Filter, decode) {
             let jsname = F.getname(jsfile),
                 file = jsname.replace(/\.zip$/, ".js");
@@ -1285,39 +1397,39 @@
             }
             contents = null;
             return F.Libjs[file];
-        }
+        },
         URL(u8, type) {
-            if (I.str(u8) &&u8.length<255&&/^(blob|http|\/{1,2}(?!\*)|\.\/|.+\/)[^\n]*?$/i.test(u8)){
+            if (I.str(u8) && u8.length < 255 && /^(blob|http|\/{1,2}(?!\*)|\.\/|.+\/)[^\n]*?$/i.test(u8)) {
                 return u8;
             }
             return I.toURL(I.blob(u8) ? u8 : new Blob([u8], {
                 type: F.getMime(type || (I.u8buf(u8) && F.CheckExt(u8)) || "js")
             }));
-        }
+        },
         reURL(url) {
             return I.reURL(url);
-        }
+        },
         getname(str) {
             let name = (str || "").split("/").pop().split("?")[0].split("&")[0].split("#")[0];
-            if (str&&(!name||!/\.\w+$/.test(name))) {
+            if (str && (!name || !/\.\w+$/.test(name))) {
                 str = str.match(/(\?|\&)?([^\&]+\.[a-z0-9A-Z]+)\&?/);
-                return str&&str[2]||'';
+                return str && str[2] || '';
             }
             return name || "";
-        }
+        },
         getExt(name) {
-            return I.LC(F.getname(name).split(".").pop());
-        }
+            return I.toLow(F.getname(name).split(".").pop());
+        },
         getKeyName(name) {
-            return F.getname(name).replace(/\.\w+$/,'');
-        }
+            return F.getname(name).replace(/\.\w+$/, '');
+        },
         getMime(type, chartset) {
-            type = type&&type.toLowerCase()||'';
+            type = type && I.toLow(type) || '';
             let mime;
             if (/^\w+\/[\w\;]+$/.test(type)) return type;
-            else type = F.getExt(type)||type.split('.').pop();
+            else type = F.getExt(type) || type.split('.').pop();
             if (!F.extlist) {
-                F.extlist = I.assign(
+                F.extlist = Object.assign.apply({},
                     I.toArr(F.exttype).map(entry => {
                         if (I.array(entry[1])) {
                             return I.toObj(entry[1].map(v => {
@@ -1345,11 +1457,11 @@
                 return mime + ";chartset=utf8";
 
             return mime;
-        }
+        },
         getType(type) {
             type = F.getMime(type);
             return type.split("/").pop();
-        }
+        },
         FilterHeader(headers) {
             I.toArr(headers, (entry) => {
                 if (/content-/.test(entry[0])) {
@@ -1371,19 +1483,19 @@
                             headers[name] = content;
                             break;
                         case "type":
-                            content = I.LC(content);
+                            content = I.toLow(content);
                             let v = content.split(";");
                             headers.filetype = content;
                             headers[name] = v[0].trim();
                             if (v[1])
-                                headers.charset = I.LC(v[1].split("=").pop().trim());
+                                headers.charset = I.toLow(v[1].split("=").pop().trim());
 
                             break;
                     }
                 }
             });
             return headers;
-        }
+        },
         ajaxHeader(request) {
             return F.FilterHeader(I.toObj((request.getAllResponseHeaders() || "").trim().split(/[\r\n]+/).map((line) => {
                 let parts = line.split(": ");
@@ -1399,7 +1511,7 @@
                     "url", request.responseURL
                 ],
             ])));
-        }
+        },
         HtmltoStr(obj) {
             if (I.elm(obj) && !obj.contents) {
                 obj = {
@@ -1413,17 +1525,17 @@
                 obj.type = HTMLElement.name;
             }
             return obj;
-        }
+        },
         mimeHead(s) {
-            let text = I.Buf16str(s),
-                result = I.ArrTest(F.ext16, text);
+            let text = I.toUp(I.toArr(s).map(v=> I.toStr(v,16).padStart(2,'0')).join("")),
+                result = I.toArr(F.ext16).filter((entry) => entry[1].test(text))[0];
             if (result && result[0])
                 return result[0];
 
             return "";
         }
     };
-    const T = new class NengeObj extends EventTarget{
+    const T = new class NengeObj extends EventTarget {
         version = 1;
         DB_NAME = "XIUNOBBS";
         DB_STORE_MAP = {
@@ -1441,13 +1553,19 @@
         StoreList = {};
         isLocal = /^(127|localhost|172)/.test(location.host);
         zipsrc = "zip.min.js";
-        un7zsrc = "extract7z.zip";
-        unrarsrc = "libunrar.min.zip";
-        serviceActive = !1;
-        mime = document.contentType;
-        readyState = document.readyState;
-        onLine = navigator.onLine;
-        mobile = !I.none(document.ontouchend);
+        get I() {
+            return I;
+        }
+        get F() {
+            return F;
+        }
+        get date() {
+            return new Date;
+        }
+        get time() {
+            return Date.now;
+        }
+        CLASS = [CustomElement, CustomFetch, CustomStore, CustomTable, Decompress];
         getStore(dbName, opt) {
             if (!dbName || dbName == T.DB_NAME) {
                 dbName = T.DB_NAME;
@@ -1464,7 +1582,7 @@
             return new CustomFetch(ARG).result;
         }
         ajax(ARG) {
-            ARG = I.assign({
+            ARG = Object.assign({
                 url: location.href
             }, ARG || {});
             return I.Async((resolve) => {
@@ -1503,7 +1621,7 @@
 
                         let result = request.response;
                         if (I.blob(result)) {
-                            result = I.File([result], ResHeaders.filename || F.getname(ARG.url), ReType, ResHeaders["last-modified"]);
+                            result = I.File([result], ResHeaders.filename || F.getname(ARG.url), ReType);
                         }
                         if (request.status == 200) {
                             return success(result, ResHeaders);
@@ -1522,7 +1640,7 @@
 
                 if (ARG.json) {
                     formData = I.toJson(ARG.json);
-                    I.assign(headers, {
+                    Object.assign(headers, {
                         Accept: [
                             F.getMime(texts[1]),
                             F.getMime(texts[0]),
@@ -1530,12 +1648,12 @@
                         ].join()
                     });
                 } else if (ARG.post) {
-                    formData = I.post(ARG.post);
+                    formData = I.toPost(ARG.post);
                 }
                 if (ARG.type && ARG.type != heads)
                     request.responseType = ARG.type;
 
-                request.open(!formData ? "GET" : "POST", I.get(ARG.url, {
+                request.open(!formData ? "GET" : "POST", I.toGet(ARG.url, {
                     inajax: T.time
                 }, ARG.get));
                 I.toArr(headers, (entry) => request.setRequestHeader(entry[0], entry[1]));
@@ -1557,24 +1675,24 @@
 
         }
         addJS(buf, cb, iscss, id) {
-            return I.Async(back=>{
-                iscss = iscss||I.buf(buf)&&(buf.type&&/css$/.test(buf.type)||buf.name&&/css$/.test(buf.name));
+            return I.Async(back => {
+                iscss = iscss || I.buf(buf) && (buf.type && /css$/.test(buf.type) || buf.name && /css$/.test(buf.name));
                 var url = F.URL(buf);
-                var script = T.$ce(iscss?'link':'script');
+                var script = T.$ce(iscss ? 'link' : 'script');
                 Object.assign(script, {
-                    type: F.getMime(iscss?'css':'js'),
+                    type: F.getMime(iscss ? 'css' : 'js'),
                     href: url,
                     src: url,
-                    rel:StyleSheet.name,
+                    rel: StyleSheet.name,
                     crossorigin: "anonymous",
                     onload(e) {
-                        if (buf!=url){
+                        if (buf != url) {
                             F.reURL(url);
                         }
                         buf = null;
-                        back(cb&&cb(e));
+                        back(cb && cb(e));
                     },
-                    onerror(e){
+                    onerror(e) {
                         this.onload(e);
                     }
                 });
@@ -1635,27 +1753,12 @@
             return obj.dispatchEvent(evt),
                 obj;
         }
-        Set(o){
-            if (!o.action)
-                o.action = {};
-
-            return (I.defines(o, {
-                I: {
-                    get: () => I
-                },
-                T: {
-                    get: () => T
-                },
-                RF: {
-                    get: () => T.RF
-                },
-                CF: {
-                    get: () => T.CF
-                },
-                BF: {
-                    get: () => T.BF
-                }
-            }), I);
+        setClass(o) {
+            o = o || new class extends EventTarget { };
+            o.action = o.action || {};
+            var { RF, CF, BF } = this;
+            I.defines(o, { I, T, F, RF: { value: RF }, CF: { value: CF }, BF: { value: BF } }, !0);
+            return o;
         }
         onEvent(elm, evt, fun, opt, cap) {
             elm = T.$(elm);
@@ -1671,24 +1774,25 @@
             } : opt, cap));
             return elm;
         }
-        onceEvent(elm, evt, fun, cap){
-            return  elm.once(evt, fun, {
-            passive: false,
-            once: true
-        }, cap)}
+        onceEvent(elm, evt, fun, cap) {
+            return elm.once(evt, fun, {
+                passive: false,
+                once: true
+            }, cap)
+        }
         docload(f) {
             if (document.readyState != T.readyState)
                 return f && f.call(T);
             document.once("DOMContentLoaded", f);
         }
-        $(e, f){
-            return e ? (I.str(e) ? I.$(e, f) : I.func(e) ? T.docload(e) : e) : undefined;
+        $(e, f) {
+            return e ? (I.str(e) ?(f || document).querySelector(e): I.func(e) ? T.docload(e) : e) : undefined;
         }
-        $$(e, f){
-            return I.$$(e, f)
+        $$(e, f) {
+            return (f || document).querySelectorAll(e) || [];
         }
-        $ce(e){
-            return I.$c(e)
+        $ce(e) {
+            return document.createElement(e)
         }
         $ct(e, txt, c) {
             let elm = T.$ce(e);
@@ -1701,11 +1805,11 @@
             return elm;
         }
         $append(a, b) {
-            if (I.str(b))b = T.$ce(b);
+            if (I.str(b)) b = T.$ce(b);
             a.appendChild(b);
             return b;
         }
-        $add(e, c){
+        $add(e, c) {
             return (e.classList.add(c) && !1) || e
         }
         async getItemAppend(name, result, ARG) {
@@ -1732,9 +1836,9 @@
         }
         RF(action, data) {
             const R = this,
-                A = R.action;
-            if (A[action])
-                return I.func(A[action]) ? I.Apply(A[action], data || [], R) : A[action];
+                A = R.action,
+                func = A[action];
+            return I.func(func) ? func.apply(R,data || []) : func;
 
         }
         CF(action, ...args) {
@@ -1742,8 +1846,9 @@
         }
         BF(action, ...a) {
             const R = this,
-                A = R.action;
-            return I.func(A[action]) ? a.length ? R.RF(action, a) : A[action].bind(R) : A[action];
+                A = R.action,
+                obj = a.shift();
+            return I.func(A[action]) ? a.length ? R.RF(action) : A[action].apply(obj,a):A[action];
         }
         getLang(name, arg) {
             return T.GL(name, arg);
@@ -1752,7 +1857,15 @@
             if (!I.none(T.lang[name]))
                 name = T.lang[name];
 
-            return I.obj(arg) ? I.RegRe(name, arg) : name;
+            return arg ? T.toReplace(name, arg) : name;
+        }
+        toReplace(str,arg){
+            if(I.str(arg)){
+                str=str.replace(/{value}/,arg);
+            }else if(I.obj(arg)){
+                I.toArr(arg,v=>str.replace(new RegExp(v[0], "g"),v[1]));
+            }
+            return str;
         }
         MediaQuery(query, fn) {
             if (matchMedia) {
@@ -1796,22 +1909,27 @@
             return sw && sw.postMessage(str);
         }
         async openServiceWorker(file) {
-            var {serviceWorker} = navigator;
+            var { serviceWorker } = navigator;
             serviceWorker.register(file).then(e => {
                 var sw;
-                if(e.installing){
+                if (e.installing) {
                     sw = e.installing;
-                    this.sendClient(sw);
                     this._PWAReady(!0);
-                }else if(e.active){
+                } else if (e.active) {
                     sw = e.active;
-                    sw.on('statechange',e =>{
-                        this.sendClient(e.target.active);
-                        T.CF('pwa_statechange', e)
-                    });
                 }
+                sw.on('statechange', e => {
+                    this.sendClient(e.target.active);
+                    T.CF('pwa_statechange', e)
+                });
+                document.on("visibilitychange", function () {
+                    if (document.visibilityState === 'visible') {
+                        T.sendClient(sw);
+                    }
+                });
+                this.sendClient(sw);
                 T.sw = sw;
-                e.on('updatefound',e => {
+                e.on('updatefound', e => {
                     this.sendClient(e.target.active);
                     T.CF('pwa_updatefound', e)
                 });
@@ -1827,20 +1945,20 @@
                 }
             }));
         }
-        sendClient(sw){
-            if(sw){
-                sw.postMessage({action:'CLIENT'});
-                if(sw!=this.sw)this.sw = sw;
+        sendClient(sw) {
+            if (sw) {
+                sw.postMessage({ action: 'CLIENT' });
+                if (sw != this.sw) this.sw = sw;
             }
         }
-        setWorker(serviceWorker){
+        setWorker(serviceWorker) {
             serviceWorker.on(evtname[1], function (e) {
                 T.clearWorker();
                 T.CF('pwa_error', e);
             });
             serviceWorker.on('message', async function (event) {
                 let data = event.data;
-                if(T.isLocal)console.log(data);
+                if (T.isLocal) console.log(data);
                 if (I.obj(data)) {
                     let { action, from } = data;
                     if (action) {
@@ -1870,11 +1988,11 @@
                     }
                 }
             });
-            serviceWorker.ready.then(sw => sw && (sw.onstatechange = e => T.CF('pwa_statechange', e)));
             return !0;
         }
-        constructor(){
-            super();            
+        constructor() {
+            super();
+            var T = this;
             Object.assign(EventTarget.prototype, {
                 on(evt, fun, opt) {
                     return this.addEventListener(evt, fun, opt);
@@ -1892,70 +2010,51 @@
                     this.dispatchEvent(new CustomEvent(evt, { detail }))
                 }
             });
-            var {serviceWorker} = navigator;
-            if(serviceWorker){
-                this.setWorker(serviceWorker)
-                this.sw = serviceWorker.controller;
-                this.PWAReady = new Promise(re=>{
-                    if(this.sw){
-                        this.sw.postMessage({action:'CLIENT'})
+            var { language, serviceWorker,onLine} = navigator;
+            var {contentType,readyState,ontouchend,currentScript,characterSet} = document;
+            var src = currentScript && currentScript.src.split("?"),
+                JSpath = src && src[0].split("/").slice(0, -1).join("/") + "/",
+                langs = I.toLow(language).split("-");
+            JSpath && (JSpath = JSpath.replace("static/", ""));
+            if (langs[0] == "zh") {
+                if (langs[1] == "cn")
+                    langs[1] = "hans";
+                else if (langs[1] != "hk")
+                    langs[1] = "hant";
+
+            }
+            Object.assign(T, {
+                JSpath,
+                ROOT: (JSpath && JSpath.replace("assets/js/", "")) || location.pathname,
+                langName: langs[0],
+                i18nName: langs.join("-"),
+                charset: I.toLow(characterSet),
+                language,
+                onLine,
+                readyState,
+                isTouch:I.hasOwnProp(HTMLElement,'ontouchstart'),
+                ts: [
+                    I.L(Text),
+                    I.L(JSON),
+                    F.getType(contentType),
+                    contentType,
+                    I.L(String)
+                ]
+            });
+            if (serviceWorker) {
+                T.setWorker(serviceWorker)
+                T.sw = serviceWorker.controller;
+                T.PWAReady = new Promise(re => {
+                    if (T.sw) {
                         re(!0);
-                    }else{
-                        this._PWAReady=re;
+                    } else {
+                        T._PWAReady = re;
                     }
                 });
-
             }
         }
     };
-    (function () {
-        var {language} = navigator;
-        var spath = document.currentScript,
-            src = spath && spath.src.split("?"),
-            JSpath = src && src[0].split("/").slice(0, -1).join("/") + "/",
-            langs = I.LC(language).split("-");
-        JSpath && (JSpath = JSpath.replace("static/", ""));
-        if (langs[0] == "zh") {
-            if (langs[1] == "cn")
-                langs[1] = "hans";
-            else if (langs[1] != "hk")
-                langs[1] = "hant";
-
-        }
-        Object.assign(T, {
-            JSpath,
-            ROOT: (JSpath && JSpath.replace("assets/js/", "")) || location.pathname,
-            langName: langs[0],
-            i18nName: langs.join("-"),
-            charset: I.LC(document.characterSet),
-            language,
-        });
-        T.ts = [
-            I.L(Text),
-            I.L(JSON),
-            F.getType(T.mime),
-            T.mime,
-            I.L(String)
-        ];
-        I.defines(T, {
-            I,
-            F,
-            date: () => new Date(),
-            time: () => Date.now(),
-            rand: () => Math.random(),
-            randNum: () => I.IntVal(Math.random().toString().slice(2)),
-            CLASS: () => [CustomElement, CustomFetch, CustomStore, CustomTable, Decompress]
-        }, 1);
-        /*
-        let ehtml = document.documentElement;
-        if (!I.Attr(ehtml, "color-scheme")) {
-            T.MediaQuery("(prefers-color-scheme: light)", (bool) => I.Attr(ehtml, {
-                "color-scheme": bool ? "light" : "dark"
-            }));
-        }
-        */
-        exports.onerror = (msg, url, lineNo, columnNo, error) => alert(msg + lineNo + url);
-    })();
+    exports.onerror = (msg, url, lineNo, columnNo, error) => alert(msg + lineNo + url);
     exports.T = T;
     I.defines(exports, {
         Nenge: () => T

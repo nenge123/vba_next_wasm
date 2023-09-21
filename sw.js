@@ -13,7 +13,7 @@ var CACHE_LIST = [
     "assets/images/zan.jpg"
 ].map(v => CACHE_PATH + v);
 var isLocal = location.host == '127.0.0.1';
-var version = '2023/09/20 15:34';
+var version = '2023 09/22 00:53';
 var myIDB;
 var PromiseList = {};
 var NowClient;
@@ -60,23 +60,29 @@ function getHeaders(headers) {
     headers.forEach((a, b) => objs[b] = a);
     return objs;
 }
-async function getClient(){
-    return NowClient||(await self.clients.matchAll()).filter(v=>v.visibilityState == 'visible')[0];
+async function getClient() {
+    if(NowClient&&NowClient.visibilityState=='visible'){
+        return NowClient;
+    }
+    var clients = await self.clients.matchAll();
+    return clients.filter(v => v.visibilityState == 'visible')[0] || NowClient||clients[0];
 }
 function postMessage(str) {
-    getClient().then(client=>{
-        if (str && str.constructor === Object) {
-            Object.assign(str, {
-                from: ServiceWorker.name,
-                origin: CACHE_PATH,
-                scriptURL: serviceWorker.scriptURL,
-            });
+    getClient().then(client => {
+        if (client) {
+            if (str && str.constructor === Object) {
+                Object.assign(str, {
+                    from: ServiceWorker.name,
+                    origin: CACHE_PATH,
+                    scriptURL: serviceWorker.scriptURL,
+                });
+            }
+            client.postMessage(str);
         }
-        client&&client.postMessage(str);
     });
 }
 function getResponse(url, action) {
-    let id = (Math.random() * Math.random() + '').slice(2);
+    let id = crypto.randomUUID();
     postMessage({ url, action, id });
     return new Promise(back => {
         PromiseList[id] = function (data) {
@@ -169,36 +175,37 @@ function saveCaches(cache_name, result) {
         }
     });
 }
-async function updateCaches(action){
+async function updateCaches(action) {
     var myCACHE = await caches.open(CACHE_NAME);
     await Promise.all(CACHE_LIST.map(async v => {
-        if(isLocal)console.log(v);
+        if (isLocal) console.log(v);
         var re = await fetch(v + '?' + Date.now());
         myCACHE.put(v, re);
     }));
-    postMessage({ action});
+    postMessage({ action });
 }
 Object.entries({
     install(event) {
         console.log('serviceWorker install');
         //if (!0 || !isLocal&& navigator.onLine) {
-            //return event.waitUntil(updateCaches().then(()=>self.skipWaiting()));
-            //.map(v=>new Request(v,{cache:'no-cache'}))
+        //return event.waitUntil(updateCaches().then(()=>self.skipWaiting()));
+        //.map(v=>new Request(v,{cache:'no-cache'}))
         //}
-        postMessage({action:'pwa_install',cachewrite:!1});
+        postMessage({ action: 'pwa_install', cachewrite: !1 });
         return self.skipWaiting(); //跳过等待
     },
     activate(event) {
-        console.log('serviceWorker activate',event.waitUntil);
+        console.log('serviceWorker activate');
         //!myIDB && postMessage({ action: 'GETDBNAME' });
-        if(!isLocal&& navigator.onLine){
-            return event.waitUntil(updateCaches('pwa_activate').then(e=>self.skipWaiting()));
-        }else{
-            postMessage({action:'pwa_activate',cachewrite:!1});
+        if (!isLocal && navigator.onLine) {
+            return event.waitUntil(updateCaches('pwa_activate').then(e => self.skipWaiting()));
+        } else {
+            postMessage({ action: 'pwa_activate', cachewrite: !1 });
         }
         return self.skipWaiting(); //跳过等待
     },
     fetch(event) {
+        if(isLocal) return;
         /**
          * 返回数据
          */
@@ -282,7 +289,6 @@ Object.entries({
             if (isLocal) console.log(data);
             var { action, result, id } = data;
             if (action == 'CLIENT') {
-                console.log('worker 建立通信');
                 NowClient = event.source;
             } else if (action == 'UPDATE CACHES') {
                 updateCaches('pwa_upatecaches')
