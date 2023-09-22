@@ -53,6 +53,10 @@
         EventTarget
     } = exports;
     const evtname = ["success", "error", "progress"];
+    const typename = ['js', 'json'];
+    /**
+     * 自定义HTML标签类绑定
+     */
     class CustomElement extends HTMLElement {
         /* 警告 如果文档处于加载中,自定义元素实际上并不能读取子元素(innerHTML等) */
         /*因此 如果仅仅操作属性(Attribute),可以比元素出现前提前定义.否则最好文档加载完毕再定义,并不会影响事件触发 */
@@ -83,6 +87,9 @@
             this.getFunc("REMOVE", a);
         }
     }
+    /**
+     * 本地数据 库操作
+     */
     class CustomStore {
         constructor(name, config) {
             config = config || {};
@@ -193,6 +200,9 @@
             });
         }
     }
+    /**
+     * 本地数据 表操作
+     */
     class CustomTable {
         constructor(table, IDB, opt) {
             Object.assign(this, {
@@ -448,6 +458,9 @@
             return this.getCursor(request.openKeyCursor(query, direction), fn);
         }
     }
+    /**
+     * Fetch请求远程文件
+     */
     class CustomFetch extends EventTarget {
         ispack = /(zip|rar|7z)$/;
         unpackText = 'unpack:';
@@ -465,21 +478,21 @@
                 CF.type = I.L(Blob);
             }
             Object.assign(CF, {
-                onprogress(current, total, name) {
-                    CF.progress && CF.progress(name + '(' + (total ? I.PER(current, total) : current) + ')', current, total);
+                toProgress(current, total, name) {
+                    I.tryCall(CF,CF.progress,name + '(' +I.PER(current, total) + ')', current, total);
                 },
-                onsuccess(result, headers) {
+                toSuccess(result, headers) {
                     CF.toEvent(evtname[0], { result, headers });
                 },
-                onerror(result) {
-                    CF.onsuccess();
-                    CF.error && CF.error(result, CF);
+                toError(result) {
+                    CF.toSuccess();
+                    I.tryCall(CF,CF.error,result, CF);
                 },
-                oncancel(response) {
-                    response.body && response.body.cancel();
+                toCancel(response) {
+                    I.tryCall(response.body,response.body.cancel);
                 },
                 async getItem(key, version) {
-                    return CF.DB && CF.DB.get(key, version)
+                    return I.tryCall(CF.DB,'get',key, version)
                 },
                 async setItem(data, key, contents, type) {
                     if (CF.DB) {
@@ -493,14 +506,14 @@
                 result: new Promise(re => {
                     CF.once(evtname[0], function (e) {
                         var { result, headers } = e.detail;
+                        I.tryCall(CF,CF.success,result, headers);
                         re(result);
-                        CF.success && CF.success(result, headers)
                     })
                 })
             });
-            CF.onsend();
+            CF.toSend();
         }
-        async onsend() {
+        async toSend() {
             var CT = this,
                 contents,
                 headers, {
@@ -515,12 +528,12 @@
                     option,
                     version,
                     ispack,
-                    onsuccess,
-                    oncancel,
-                    onerror,
+                    toSuccess,
+                    toCancel,
+                    toError,
                 } = CT;
             var callback = result => {
-                onsuccess(result, headers);
+                toSuccess(result, headers);
             };
             var callresult = async () => {
                 if (result && result.contents) {
@@ -535,8 +548,8 @@
                             contents: contents,
                             Name: filename,
                             ext: fileext,
-                            onprogress: (current, total, name) => this.onprogress(current, total, this.unpackText + name),
-                            password: result.password || this.password
+                            progress: (current, total, name) => CT.toProgress(current, total, CT.unpackText + name),
+                            password: result.password || CT.password
                         }).result;
 
                     } else
@@ -554,7 +567,7 @@
                 }
                 store = T.LibStore;
             }
-            var result = await this.getItem(key, version);
+            var result = await CT.getItem(key, version);
             if (result && (!onLine || !T.onLine)) {
                 return callresult(result);
             }
@@ -563,7 +576,7 @@
                 if (result) {
                     return callresult(result);
                 } else {
-                    return onerror({ message: this.statusText });
+                    return toError({ message: CT.statusText });
                 }
             }
             headers = F.FilterHeader(I.toObj(response.headers) || {});
@@ -579,12 +592,12 @@
                 CT.password = password;
             }
             if (type == 'head') {
-                oncancel(response);
+                toCancel(response);
                 return callback(headers);
             }
             if (result) {
                 if (!result.filesize || filesize == result.filesize) {
-                    oncancel(response);
+                    toCancel(response);
                     return callresult(result);
                 }
                 result = undefined;
@@ -595,16 +608,16 @@
                 } else {
                     result = await response.text();
                 }
-                return onerror({ message: result || response.statusText, headers });
+                return toError({ message: result || response.statusText, headers });
             }
             contents = await CT.steam(response, headers);
             filesize = contents.size;
             if (type != I.L(Blob)) {
                 contents = await I.toU8(contents);
-                if (this.Filter) {
-                    contents = await this.Filter(contents, urlname, headers);
+                if (CT.Filter) {
+                    contents = await CT.Filter(contents, urlname, headers);
                 } else if (type) {
-                    contents = I.decode(contents, this.charset);
+                    contents = I.decode(contents, CT.charset);
                 }
                 if (type == T.ts[1]) {
                     contents = I.Json(contents);
@@ -620,7 +633,7 @@
             } else {
                 type = File.name;
             }
-            option = Object.assign(option||{}, {
+            option = Object.assign(option || {}, {
                 timestamp: T.date,
                 filename: filename,
                 filesize: filesize,
@@ -630,23 +643,24 @@
             if (version) option.version = version;
             if (I.u8buf(contents) || I.blob(contents)) {
                 if (unpack) {
-                    return this.onpack(contents, option, key, headers);
+                    return CT.toPack(contents, option, key, headers);
                 }
             }
             if (contents) {
-                this.setItem(option, key, contents);
+                CT.setItem(option, key, contents);
                 return callback(contents);
             }
         }
-        async onpack(contents, option, key, headers) {
+        async toPack(contents, option, key, headers) {
+            var CT = this;
             var fileext = await F.CheckExt(contents), filecontent;
-            if (fileext && this.ispack.test(fileext)) {
+            if (fileext && CT.ispack.test(fileext)) {
                 var decompress = new Decompress({
                     contents: contents,
                     Name: option.filename,
                     ext: fileext,
-                    password: this.password,
-                    onprogress: (current, total, name) => this.onprogress(current, total, this.unpackText + name)
+                    password: CT.password,
+                    progress: (current, total, name) => CT.toProgress(current, total, CT.unpackText + name)
                 });
                 var maxLength = 0;
                 var backdata;
@@ -655,17 +669,17 @@
                     await I.Async(
                         I.toArr(filecontent).map(async entry => {
                             var [name, data] = entry;
-                            if (this.libjs) {
+                            if (CT.libjs) {
                                 name = F.getname(name);
                                 var ftype = F.getMime(name);
                                 var fkey = T.LibPad + name;
-                                data = this.reBuf(data, this.unbuf, name, ftype);
-                                await this.setItem({
+                                data = CT.reBuf(data, CT.unbuf, name, ftype);
+                                await CT.setItem({
                                     contents: data,
                                     filename: name,
                                     filesize: data.byteLength,
                                     filetype: ftype,
-                                    type: I.blob(data) ? File.name : I.blob(data) ? Uint8Array.name : this.unbuf,
+                                    type: I.blob(data) ? File.name : I.blob(data) ? Uint8Array.name : CT.unbuf,
                                     version: option.version
                                 }, fkey);
                                 if (fkey == key) {
@@ -673,14 +687,14 @@
                                 }
                             } else {
                                 maxLength += data.byteLength;
-                                filecontent[name] = this.reBuf(data, this.unbuf);
+                                filecontent[name] = CT.reBuf(data, CT.unbuf);
                             }
                         }));
                     if (backdata) {
                         contents = null;
-                        return this.onsuccess(backdata, headers);
-                    } else if (this.libjs && filecontent) {
-                        return this.onsuccess(filecontent, headers);
+                        return CT.toSuccess(backdata, headers);
+                    } else if (CT.libjs && filecontent) {
+                        return CT.toSuccess(filecontent, headers);
                     }
                 }
                 if (contents && maxLength) {
@@ -695,15 +709,13 @@
 
                 }
             }
-            await this.setItem(option, key, contents);
-            if (filecontent) return this.onsuccess(filecontent, headers);
-            this.onsuccess(contents, headers);
+            await CT.setItem(option, key, contents);
+            if (filecontent) return CT.toSuccess(filecontent, headers);
+            CT.toSuccess(contents, headers);
 
         }
-        cancel(response) {
-            response.body && response.body.cancel();
-        }
         async steam(response, headers) {
+            var CT = this;
             var {
                 body
             } = response;
@@ -730,24 +742,18 @@
                     speedsize = value.length;
                     havesize += speedsize;
                 }
-                let current = "";
-                if (length && havesize <= length) {
-                    current = havesize;
-                } else {
-                    current = `${(havesize / 1024).toFixed(1)}KB`;
-                    length = 0;
-                }
                 /* 下载进度*/
-                this.onprogress(current, length, this.downText + filename);
+                CT.toProgress(havesize, length, CT.downText + filename);
                 chunks.push(value);
             }
             return I.File(chunks, filename, type);
         }
         reBuf(data, unbuf, name, ftype) {
+            var CT = this;
             if (unbuf == T.ts[0])
-                data = I.decode(data, this.charset);
+                data = I.decode(data, CT.charset);
             else if (unbuf == T.ts[1])
-                data = I.Json(I.decode(data, this.charset));
+                data = I.Json(I.decode(data, CT.charset));
             else if (!unbuf && name)
                 data = I.File([data], name, ftype);
 
@@ -765,7 +771,7 @@
             let data = {
                 headers: headers || {}
             };
-            Object.assign(data,head);
+            Object.assign(data, head);
             if (json) {
                 post = I.toJson(ARG.json);
                 data.headers.Accept = F.getMime(T.ts[1]);
@@ -781,24 +787,107 @@
             });
         }
     }
+    class CustomAjax extends EventTarget {    
+        constructor(ARG) {
+            super();
+            const A = this;
+            if (I.str(ARG))
+                A.url = ARG;
+            else
+                Object.assign(A, ARG);
+            Object.assign(A, {
+                headers:{},
+                total:0,
+                toProgress(bool,current, total,name) {
+                    I.tryCall(A,bool?A.progress:A.postProgress,name+I.PER(current,total),current, total);
+                },
+                toSuccess(result, headers) {
+                    A.toEvent(evtname[0], { result, headers })
+                },
+                toError(result,headers,request) {
+                    A.toSuccess();
+                    I.tryCall(A,A.error,result,headers,request);
+                },
+                result: new Promise(re => A.once(evtname[0], e => {
+                    var { result, headers } = e.detail;
+                    I.tryCall(A,A.success,result, headers);
+                    re(result);
+                }))
+            })
+            if (A.url) A.toSend();
+        }
+        getHeader(request) {
+            return F.FilterHeader(I.toObj((request.getAllResponseHeaders() || "").trim().split(/[\r\n]+/).map((line) => {
+                let parts = line.split(": ");
+                return [parts.shift(), parts.join(": ")];
+            })));
+        }
+        toSend() {
+            var A = this;
+            var { url, get, post, type, json, headers, paramsDictionary } = A;
+            const request = new XMLHttpRequest(paramsDictionary);
+            var ResHeaders, ReType;
+            var urlname = F.getname(url)||'index.html';
+            request.on('readystatechange', (event) => {
+                let readyState = request.readyState;
+                if (readyState === 2) {
+                    ResHeaders = A.getHeader(request);
+                    ReType = ResHeaders.type;
+                    A.total = ResHeaders.length||0;
+                    if (!type) {
+                        if (ReType == F.getMime('json')) {
+                            request.responseType = 'json';
+                        } else if (ReType == F.getMime("xml")) {
+                            request.responseType = "xml";
+                        } else if (ResHeaders.filename || !/(text|html|javascript|css)/.test(ReType)) {
+                            request.responseType = I.L(Blob);
+                        }
+                    } else if (type == 'head') {
+                        request.abort();
+                    }
+                } else if (readyState === 4) {
+                    if (type == 'head'){
+                        return A.toSuccess(ResHeaders);
+                    }
+                    let result = request.response;
+                    if (I.blob(result)) {
+                        result = I.File([result], ResHeaders.filename || urlname, ReType);
+                    }
+                    if (request.status == 200) {
+                        return A.toSuccess(result, ResHeaders);
+                    } else {
+                        return A.toError(request.statusText || "net::ERR_FAILED", ResHeaders, request);
+                    }
+                }
+            });
+            request.on(evtname[2], (e) => A.toProgress(!0,e.loaded, e.total,urlname));
+            request.upload.on(evtname[2], (e) => A.toProgress(!1,e.loaded, e.total,urlname));
+            var formData = json ? I.toJson(json) : post ? I.toPost(post) : undefined;
+            json && Object.assign(headers, { Accept: F.getMime(typename[1]) });
+            if (type != 'head') request.responseType = type;
+            request.open(!formData ? "GET" : "POST", I.toGet(url, { inajax: Date.now()}));
+            I.toArr(headers, (entry) => request.setRequestHeader(entry[0], entry[1]));
+            request.send(formData);
+        }
+    }
+    /**
+     * 解压文件
+     */
     class Decompress extends EventTarget {
         src7z = "extract7z.zip";
         srcrar = "libunrar.min.zip";
+        pwText = 'Enter password.';
         constructor(ARG) {
             super();
             if (!I.obj(ARG) && (I.buf(ARG) || I.blob(ARG)))
                 this.contents = ARG;
             else
                 Object.assign(this, ARG);
-            this.on(evtname[2], function (e) {
-                this.onprogress && this.onprogress.apply(this, e.detail);
-            });
-            this.result = new Promise(re => {
-                this.once(evtname[0], function (e) {
-                    var { detail } = e;
-                    re(detail);
-                    this.success && this.success(detail)
-                })
+            Object.assign(this,{
+                toProgress(current, total, name){
+                    I.tryCall(this,this.progress,current, total, name);
+                },
+                result:new Promise(re => this.once(evtname[0], e => re(e.detail)))
             });
             if (this.contents) this.ondone();
 
@@ -806,20 +895,24 @@
         async ondone() {
             var {
                 ext,
-                contents
+                contents,
+                password,
+                progress,
+                pwText,
             } = this;
             if (!ext) {
                 ext = await F.CheckExt(contents);
             }
-            /** || await this.extractor(ext) */
-            var result = /(zip|rar|7z)$/.test(ext) && (/zip$/.test(ext) && await this.zip() || await this.rar(ext)) || await I.toU8(contents);
-            this.toEvent(evtname[0], result);
+            if (/zip$/.test(ext)) {
+                return this.toEvent(evtname[0], await new ZipCompress({ contents, password, progress, pwText }).result);
+            }
+            this.toEvent(evtname[0], /(zip|rar|7z)$/.test(ext) && await this.rar(ext) || await I.toU8(contents));
         }
+        /**
         async extractor(ext) {
             return I.Async(async re => {
                 F.getLibjs('extractor-new.min.zip').catch(e => re()).then(url => {
                     if (!url) return re();
-                    /*T.JSpath+'lib/extractor-new.js?'+T.time */
                     var worker = new Worker(url);
                     var result = {},
                         nowFile, len = 0,
@@ -853,7 +946,7 @@
                         } else if (error && !result[nowFile].length) {
                             delete result[nowFile];
                         }
-                        nowFile && this.toEvent(evtname[2], [len, max, nowFile]);
+                        nowFile && this.toProgress(len, max, nowFile);
                     };
                     worker.onerror = e => {
                         worker.terminate();
@@ -872,16 +965,17 @@
 
             });
         }
+        **/
         async rar(ext) {
             var {
                 contents,
                 password,
-                onprogress,
+                progress,
                 src7z, srcrar
             } = this;
             var src = ext && /7z$/.test(ext) ? src7z : srcrar;
             contents = await I.toU8(contents);
-            let url = await F.getLibjs(src, onprogress);
+            let url = await F.getLibjs(src, progress);
             return I.Async(complete => {
                 let result, worker = new Worker(url),
                     close = e => worker.terminate();
@@ -901,9 +995,9 @@
                             !result && (result = {});
                             return data && (result[file] = data);
                         } else if (t == 4) {
-                            return (total > 0 && total >= current) && this.toEvent(evtname[2], [current, total, name || file]);
+                            return (total > 0 && total >= current) && this.toProgress(current, total, name || file);
                         } else if (t === -1) {
-                            password = prompt('Enter password.', password || "");
+                            password = prompt(this.pwText, password || "");
                             if (!password) {
                                 complete(undefined);
                             } else {
@@ -927,6 +1021,57 @@
 
             })
         }
+    }
+    /**
+     * 解压ZIP
+     */
+    class ZipCompress extends EventTarget {
+        zipsrc = "zip.min.js";
+        pwText = 'Enter password.';
+        constructor(ARG) {
+            super();
+            var Z = this;
+            if (I.blob(ARG) || I.buf(ARG)) {
+                Z.contents = ARG;
+            } else {
+                Object.assign(Z, ARG);
+            }
+            Object.assign(Z,{
+                toProgress(current, total, name) {
+                    I.tryCall(Z,Z.progress,current, total, name);
+                },
+                result:new Promise(re => Z.once(evtname[0], e => re(e.detail)))
+            });
+            if (Z.contents) Z.pack ? Z.toEnData() : Z.toDeData();
+        }
+        async loadjs() {
+            if (I.nil(exports.zip)) {
+                await T.loadLibjs(this.zipsrc, this.progress);
+            }
+        }
+        async toEnData() {
+            await this.loadjs();
+            var { password, contents } = this;
+            const zipFileWriter = new zip.BlobWriter();
+            const zipWriter = new zip.ZipWriter(zipFileWriter, {
+                password
+            });
+            if (!contents) return zipWriter;
+            if (I.buf(contents)) {
+                zipWriter.add('unknow.data', new zip.BlobReader(I.toBlob(contents)), { onprogress: (current, total) => this.toProgress(current, total), password });
+            } else {
+                I.toArr(contents).map(entry => zipWriter.add(entry[0], new zip.BlobReader(I.toBlob(entry[1])), { onprogress: (current, total) => this.toProgress(current, total, entry[0]), password }));
+            }
+            await zipWriter.close({ onprogress: (current, total) => this.toProgress(current, total, 'complete') });
+            this.toEvent(evtname[0], await zipFileWriter.getData());
+        }
+        async toDeData() {
+            var { password, contents } = this;
+            await this.loadjs();
+            var ZipFile = new zip.ZipReader(new zip.BlobReader(I.blob(contents) ? contents : I.toBlob(contents))),
+                entrylist = await ZipFile.getEntries();
+            this.toEvent(evtname[0], !I.empty(entrylist) ? await this.getEntries(entrylist) || await I.toU8(contents) : undefined)
+        }
         async getEntries(entrylist, password, arr) {
             if (I.none(password)) {
                 var index, fistEntry = entrylist.filter((v, k) => {
@@ -949,13 +1094,13 @@
 
         }
         async getData(entry, password) {
-            return entry.getData(new zip.Uint8ArrayWriter(), { password, onprogress: (current, total) => this.toEvent(evtname[2], [current, total, entry.filename]) });
+            return entry.getData(new zip.Uint8ArrayWriter(), { password, onprogress: (current, total) => this.toProgress(current, total, entry.filename) });
         }
         async getEncrypted(entry, password) {
             var buf = await I.Async((re) => {
                 this.getData(entry, password).catch(
                     e => {
-                        password = prompt('Enter password.', password);
+                        password = prompt(this.pwText, password);
                         if (!password) return undefined;
                         return this.getEncrypted(entry, password);
                     }
@@ -965,84 +1110,146 @@
             if (I.u8buf(buf) || I.blob(buf)) return [password, [entry.filename, buf]];
             else return buf;
         }
-        async zip() {
-            var {
-                contents
-            } = this;
-            if (typeof exports.zip === I.TP()) await T.loadLibjs(T.zipsrc, this.onprogress);
-            if (!I.blob(contents)) contents = new Blob([contents.buffer || contents], {
-                type: F.getMime('*')
-            });
-            var ZipFile = new zip.ZipReader(new zip.BlobReader(contents)),
-                entrylist = await ZipFile.getEntries();
-            if (!I.empty(entrylist)) return await this.getEntries(entrylist);
-        }
     }
+    /**
+     * 检查转换类
+     */
     const I = {
         IF: (o, a) => o instanceof a,
         IC: (o, a) => I.CS(o) === a,
         TP: o => typeof o,
-        N: o => o.name|| (I.CS(o) && I.CS(o).name) || I.TP(o),
+        N: o => o.name || (I.CS(o) && I.CS(o).name) || I.TP(o),
         NC: o => I.toLow(I.N(o)),
         R: (o, ...a) => Reflect.construct(o, a),
         L: o => (
             I.ST(o) || I.N(o) || I.toStr(o)
         ).replace(/^(\w)/, (re) => I.toLow(re)),
         C: o => I.CS(o),
-        CS: o => !I.nil(o)&& o.constructor,
+        CS: o => !I.nil(o) && o.constructor,
         DP: (o, a) => Reflect.deleteProperty(o, a),
-        FE: (o, f) => (f && o.forEach && o.forEach(f)) || o,
-        FM: (o, f) => (f && o.map && o.map(f)) || o,
+        /**
+         * 遍历数组
+         * @param {Array} o 
+         * @param {Function} f 
+         * @returns {Array}
+         */
+        Each: (o, f) => f && o.forEach(f) || o,
+
         NN: o => I.toLow(o.nodeName),
         ST: o => I.toLow(o[Symbol.toStringTag] || ""),
         dE: o => (o || document).documentElement,
         dElm: (o, a) => I.dE(new DOMParser().parseFromString(o, a)),
+        /**
+         * HTML对象
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         elm: o => I.IF(o, HTMLElement),
         node: o => I.IF(o, Node),
         nodelist: o => I.IF(o, NodeList),
-        isDoc: o => I.IF(o, Document),
+        /**
+         * 异步函数
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         await: o => I.IF(o, Promise),
+        /**
+         * Blob对象
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         blob: o => I.IF(o, Blob),
+        /**
+         * 文件
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         file: o => I.IF(o, File),
-        evt: o => I.IF(o, Event),
-        keyevt: o => I.IF(o, KeyboardEvent),
+        /**
+         * 函数
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         func: o => I.IF(o, Function) && !I.isClass(o),
         isClass: o => /^class\s/.test(I.toStr(o.constructor)),
+        /**
+         * 数组
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         array: o => Array.isArray(o),
+        /**
+         * 普通对象集
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         obj: o => I.IC(o, Object),
+        /**
+         * 二进制
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         buf: o => I.IC(o && o.buffer || o, ArrayBuffer),
+        /**
+         * Uint8Array对象
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         u8obj: o => I.IC(o, Uint8Array),
         u8buf: o => I.u8obj(o),
         str: o => I.IC(o, String),
         toURL: o => URL.createObjectURL(o),
         reURL: o => URL.revokeObjectURL(o),
+        /**
+         * 布尔值
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         bool: o => I.IC(o, Boolean),
+        /**
+         * 数字
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         num: o => I.IC(o, Number),
+        /**
+         * null值
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         null: o => o === null,
+        /**
+         * 未定义值
+         * @param {Object} o 
+         * @returns {Boolean} 
+         */
         none: o => I.TP(o) == I.TP(),
+        /**
+         * 空值或者未定义
+         * @param {Object} o 
+         * @returns {Boolean}
+         */
         nil: o => I.null(o) || I.none(o),
-        Arr: o => new Array(o),
-        ArrFrom: o => Array.from(o),
         /**
          * 对象原型
          * @param {Object} o 对象 
          * @returns {prototype}
          */
-        Proto:o=>!I.nil(o)&&o.prototype,
+        Proto: o => !I.nil(o) && o.prototype,
         /**
          * 原型属性
          * @param {Object} o 对象 
          * @param {*} p 属性/方法
          * @returns {Boolean}
          */
-        hasOwnProp:(o,p)=>I.hasProp(I.Proto(o),p),
+        hasOwnProp: (o, p) => I.hasProp(I.Proto(o), p),
         /**
          * 是否含有属性
          * @param {Object} o 对象
          * @param {String} p 属性/方法
          * @returns {Boolean}
          */
-        hasProp:(o,p)=>o.hasOwnProperty(p),
+        hasProp: (o, p) => o.hasOwnProperty(p),
         /**
          * 转化为ArrayBuffer
          * @param {Blob} o 
@@ -1054,7 +1261,13 @@
          * @param {Blob} o
          * @returns {Promise<Uint8Array>}
          */
-        Blob2U8:async o=>I.toU8(await I.toBuf(o)),
+        Blob2U8: async o => I.toU8(await I.toBuf(o)),
+        /**
+         * 转换为BLOB
+         * @param {*} o 
+         * @returns 
+         */
+        toBlob: o => new Blob([o.buffer || o]),
         /**
          * {async}
          * 转化为Uint8Array
@@ -1062,26 +1275,26 @@
          * @returns {Uint8Array|Promise<Uint8Array>}
          */
         toU8: o => I.u8buf(o) ? o : I.blob(o) ? I.Blob2U8(o) : new Uint8Array(o.buffer || o),
-        U8:o=>I.toU8(o),
+        U8: o => I.toU8(o),
         /**
          * 打印字符
          * @param {any} o 
          * @param {number|null} a 参数
          * @returns {String}
          */
-        toStr:(o,a)=>o.toString(a),
+        toStr: (o, a) => o.toString(a),
         /**
          * 大写
          * @param {String} o 
          * @returns {String}
          */
-        toUp:o=>o&&o.toUpperCase(),
+        toUp: o => o && o.toUpperCase(),
         /**
          * 小写
          * @param {String} o 
          * @returns {String}
          */
-        toLow:o=>o&&o.toLowerCase(),
+        toLow: o => o && o.toLowerCase(),
         /**
          * 解码二进制
          * @param {Uint8Array} o 
@@ -1095,14 +1308,17 @@
          * @returns {Uint8Array}
          */
         encode: o => new TextEncoder().encode(o),
-        isForm: o => I.IF(o, FormData),
-        setForm: o => new FormData(o),
-        setParam: o => new URLSearchParams(o),
         Int: o => I.IntVal(o),
         IntVal: (o, a) => parseInt(o, a),
-        PER: (o, ...a) => I.Int(
-            (100 * o) / a[0]
-        ).toFixed(0) + (!a[1] ? "%" : ""),
+        PER(a,b,c){
+            if(a<=b){
+                return (100*a / b ).toFixed(0)+'%';
+            }else if(a){
+                return (a / 1024).toFixed(1)+'KB';
+            }else{
+                return '0%';
+            }
+        },
         /**
          * 返回一个异步对象Promise
          * @param {Function|Array<Function>} o 异步函数或异步函数组 
@@ -1112,38 +1328,50 @@
         Async: (o, b) => I.array(o) ? b ? Promise.allSettled(o) : Promise.all(o) : I.func(o) ? new Promise(o) : Promise.resolve(),
         /**
          * 设置内联样式
-         * @param {*} o 
-         * @param {*} a 
+         * @param {CSSStyleDeclaration} o 
+         * @param {JSON} a 
          * @returns 
          */
-        setStyle: (o, a) => (I.toArr(a, x=>(o.style || o).setProperty(x[0], x[1])) && 0) || o,
+        setStyle: (o, a) => (I.toArr(a, x => (o.style || o).setProperty(x[0], x[1])) && 0) || o,
         /**
          * 获取内联样式
-         * @param {*} o 
-         * @returns 
+         * @param {CSSStyleDeclaration} o 
+         * @returns {JSON}
          */
-        getStyle:o=>I.EachItem(o.style || o),
+        getStyle: o => I.EachItem(o.style || o, !1),
         /**
          * 获取HTML对象属性
-         * @param {*} o 
-         * @returns 
+         * @param {NamedNodeMap} o 
+         * @returns {JSON}
          */
-        getAttr: o => I.EachItem(o.attributes || o),
+        getAttr: o => I.EachItem(o.attributes || o, !1),
         /**
          * 设置HTML属性
-         * @param {*} o 
-         * @param {*} a 
+         * @param {NamedNodeMap} o 
+         * @param {JSON} a 
          * @returns 
          */
-        setAttr:(o, a) => (I.toArr(a, x=>(o.style || o).setAttribute(x[0], x[1])) && 0) || o,
+        setAttr: (o, a) => (I.toArr(a, x => (o.attributes || o).setAttribute(x[0], x[1])) && 0) || o,
         /**
-         * 执行函数
-         * @param {*} o 
-         * @param  {...any} a 
-         * @returns 
+         * 尝试执行函数
+         * @param {Object} o 执行对象
+         * @param {Function|String} fn 函数名.函数对象
+         * @param  {Arguments} a 参数
+         * @returns {any} 函数执行结果
          */
-        toApply(o,...a){
-            return o&&Reflect.apply(o, a.shift(), a);
+        tryCall:(o, fn, ...a)=>I.tryApply(o,fn,a),
+        /**
+         * 尝试执行函数
+         * @param {Object} o 执行对象
+         * @param {Function|String} fn 函数名.函数对象
+         * @param  {Arguments} a 参数
+         * @returns {any} 函数执行结果
+         */
+        tryApply(o, fn,a) {
+            if(!I.nil(o)){
+                if (fn&&I.str(fn)) fn = o[fn];
+                return !I.func(fn) ? undefined : fn.apply(o, a);
+            }
         },
         /**
          * 打印数据对象
@@ -1151,47 +1379,50 @@
          * @param {Boolean} k 
          * @returns {Array<String>|Array<Array>|JSON}
          */
-        EachItem(o,k){
-            var a=[],b={};
-            if(I.str(o)){
+        EachItem(o, k) {
+            var a = [], b = {};
+            if (k === !0 && I.array(o)) {
+                return o;
+            } else if (k === !1 && I.obj(o)) {
+                return o;
+            } else if (I.str(o)) {
                 a = Array.from(o);
-            }else if(o.forEach){
-                k===!0?o.forEach(v=>a.push(v)):o.forEach((v,i)=>I.array(v)&&v.length==2?b[v[0]] = v[1]:b[i]=v);
-            }else if(o.item){
+            } else if (I.func(o.entries)) {
+                var c = o.entries();
+                var i = 0;
+                while (!0) {
+                    var { done, value } = c.next();
+                    if (done) break;
+                    if (value[0] === i) {
+                        a.push(value[1]);
+                    } else {
+                        a.push(value);
+                    }
+                    i += 1;
+                }
+
+            } else if (o.item) {
                 for (let i = 0; i < o.length; i++) {
                     var value = o.item(i);
-                    if(I.str(value)){
-                        var key = I.toApply(o.getPropertyValue,o,value);
-                        if(key)b[key] = value;
+                    if (I.str(value)) {
+                        var key = I.tryCall(o, o.getPropertyValue, value);
+                        if (key) b[key] = value;
                         else a.push(value);
-                    }else if(value){
-                        if(value.nodeType===2){
-                            b[value.name] = value.value;
-                        }else{
+                    } else if (value) {
+                        if (value.nodeType === 2) {
+                            a.push([value.name, value.value]);
+                        } else {
                             a.push(value);
                         }
                     }
                 }
-            }else if(I.func(o.entries)){
-                    var c = o.entries();
-                    while (!0) {
-                        var data = c.next();
-                        if(data.done)break;
-                        if(I.array(data.value)){
-                            var [key,value] = data.value;
-                            if(!k)b[key] = value;
-                            else I.num(key)?a.push(value):a.push(data.value);
-                        }else{
-                            a.push(data.value);
-                        }
-                    }
-
+            } else if (o.forEach) {
+                I.Each(o, v => a.push(v));
             }
-            if(k===!0)b=Object.entries(b);
-            return a.length?k===!1?Object.fromEntries(a.map((v,i)=>!I.array(v) || v.length != 2 ? [i,v] :v)):a:b;
+            return k === !1 ? Object.fromEntries(a.map((v, i) => I.array(v) && v.length == 2 ? v : [i, v])) : a;
         },
         getEntries(o) {
-            return I.array(o)?o:I.obj(o)?Object.entries(o):I.num(o) || o.byteLength?I.ArrFrom(I.toU8(o.buffer || o)) :I.EachItem(o,!0);
+            return I.array(o) ? o : I.obj(o) ? Object.entries(o) : I.num(o) || o.byteLength ? Array.from(I.toU8(o.buffer || o)) : I.EachItem(o, !0);
         },
         /**
          * 设置对象属性
@@ -1248,7 +1479,7 @@
         progress(fn, ...a) {
             if (fn) {
                 a[0] += " " + I.PER(a[1], a[2]);
-                fn&&fn.apply(a[3],a);
+                fn && fn.apply(a[3], a);
             }
         },
         /**
@@ -1268,10 +1499,8 @@
          * @returns {FormData}
          */
         toPost(obj) {
-            let post = I.isForm(obj) ? obj : I.setForm(I.elm(obj) ? obj : I.str(obj) ? T.$(obj) : undefined);
-            if (I.obj(obj))
-                I.toArr(obj, (v) => post.append(v[0], v[1]));
-
+            var post = obj instanceof FormData ? obj : new FormData(obj instanceof HTMLFormElement ? obj : undefined);
+            if (I.obj(obj)) I.toArr(obj, v => post.append(v[0], v[1]));
             return post;
         },
         /**
@@ -1281,10 +1510,13 @@
          * @returns {String}
          */
         toGet(url, ...arg) {
-            let urlsearch = url.split("?"),
-                urls = (urlsearch[1] && urlsearch[1].split("#")[0]) || "",
-                data = I.toArr(I.toObj(I.setParam(urls + "&" + arg.map((v) => (I.obj(v) ? I.setParam(v) : v)).join("&")))).map((v) => v[0] + "=" + v[1]).join("&").replace(/=&/g, "&");
-            return urlsearch[0] + (data ? "?" + data : "");
+            var [href, search] = url.split("?");
+            search = new URLSearchParams(search);
+            I.Each(arg, v => {
+                if (I.str(v)) v = new URLSearchParams(v);
+                I.toArr(v, x => search.set(x[0], x[1]))
+            });
+            return href + (search.size ? '?' + I.toStr(search) : '');
         },
         /**
          * 转换对象为JSON
@@ -1292,7 +1524,7 @@
          * @returns {JSON}
          */
         toObj(o) {
-            return I.obj(o) ? o : I.EachItem(o,!1);
+            return I.obj(o) ? o : I.EachItem(o, !1);
         },
         /**
          * 转换为数组
@@ -1301,11 +1533,14 @@
          * @returns {Array<value>}
          */
         toArr(obj, func) {
-            if (!obj)return [];
+            if (!obj) return [];
             let arr = I.getEntries(obj);
-            return I.func(func) ?I.FE(arr, func):arr;
+            return I.Each(arr, func);
         }
     };
+    /**
+     * 其他操作
+     */
     const F = {
         Libjs: {},
         ext16: {
@@ -1409,10 +1644,11 @@
             return I.reURL(url);
         },
         getname(str) {
-            let name = (str || "").split("/").pop().split("?")[0].split("&")[0].split("#")[0];
-            if (str && (!name || !/\.\w+$/.test(name))) {
-                str = str.match(/(\?|\&)?([^\&]+\.[a-z0-9A-Z]+)\&?/);
-                return str && str[2] || '';
+            str = str.replace(/^https?:\/\/[^\/\?\#\&]+/g,'') || "";
+            let name = str.split("/").pop().split("?")[0].split("&")[0].split("#")[0];
+            if (!name&&(str = str.match(/[^\/\?\&\#\=\*]+\.[a-z0-9A-Z]+/))){
+                console.log(str);
+                return str[0] || '';
             }
             return name || "";
         },
@@ -1512,13 +1748,9 @@
             ])));
         },
         HtmltoStr(obj) {
-            if (I.elm(obj) && !obj.contents) {
-                obj = {
-                    contents: obj
-                };
-            }
-            let elm = obj && obj.contents;
+            let elm = obj && obj.contents || obj;
             if (I.elm(elm)) {
+                if (I.elm(obj)) obj = {};
                 obj.contents = elm.outerHTML;
                 obj.tag = I.NN(document.body);
                 obj.type = HTMLElement.name;
@@ -1526,7 +1758,7 @@
             return obj;
         },
         mimeHead(s) {
-            let text = I.toUp(I.toArr(s).map(v=> I.toStr(v,16).padStart(2,'0')).join("")),
+            let text = I.toUp(I.toArr(s).map(v => I.toStr(v, 16).padStart(2, '0')).join("")),
                 result = I.toArr(F.ext16).filter((entry) => entry[1].test(text))[0];
             if (result && result[0])
                 return result[0];
@@ -1534,6 +1766,9 @@
             return "";
         }
     };
+    /**
+     * 主对象
+     */
     const T = new class NengeObj extends EventTarget {
         version = 1;
         DB_NAME = "XIUNOBBS";
@@ -1551,7 +1786,6 @@
         action = {};
         StoreList = {};
         isLocal = /^(127|localhost|172)/.test(location.host);
-        zipsrc = "zip.min.js";
         get I() {
             return I;
         }
@@ -1562,9 +1796,9 @@
             return new Date;
         }
         get time() {
-            return Date.now;
+            return Date.now();
         }
-        CLASS = [CustomElement, CustomFetch, CustomStore, CustomTable, Decompress];
+        CLASS = [CustomElement, CustomFetch, CustomStore, CustomTable, Decompress, ZipCompress,CustomAjax];
         getStore(dbName, opt) {
             if (!dbName || dbName == T.DB_NAME) {
                 dbName = T.DB_NAME;
@@ -1581,83 +1815,7 @@
             return new CustomFetch(ARG).result;
         }
         ajax(ARG) {
-            ARG = Object.assign({
-                url: location.href
-            }, ARG || {});
-            return I.Async((resolve) => {
-                const request = new XMLHttpRequest(ARG.paramsDictionary);
-                const texts = T.ts;
-                let ResHeaders,
-                    ReType,
-                    success = (...a) => {
-                        ARG.success && ARG.success.apply(request, a);
-                        resolve(a[0]);
-                    },
-                    error = (...a) => {
-                        ARG.error && ARG.error.apply(request, a);
-                        resolve(null);
-                    },
-                    heads = 'head';
-                request.on('readystatechange', (event) => {
-                    let readyState = request.readyState;
-                    if (readyState === 2) {
-                        ResHeaders = F.ajaxHeader(request);
-                        ReType = ResHeaders.type;
-                        if (!ARG.type) {
-                            if (ReType == F.getMime(texts[1])) {
-                                request.responseType = texts[1];
-                            } else if (ReType == F.getMime("xml")) {
-                                request.responseType = "xml";
-                            } else if (ResHeaders.filename || !/(text|html|javascript|css)/.test(ReType)) {
-                                request.responseType = I.L(Blob);
-                            }
-                        } else if (ARG.type == heads) {
-                            request.abort();
-                        }
-                    } else if (readyState === 4) {
-                        if (ARG.type == heads)
-                            return success(ResHeaders);
-
-                        let result = request.response;
-                        if (I.blob(result)) {
-                            result = I.File([result], ResHeaders.filename || F.getname(ARG.url), ReType);
-                        }
-                        if (request.status == 200) {
-                            return success(result, ResHeaders);
-                        } else {
-                            return error(request.statusText || "net::ERR_FAILED", ResHeaders, result);
-                        }
-                    }
-                });
-                I.func(ARG[evtname[2]]) && request.on(evtname[2], (e) => I.progress(ARG[evtname[2]], "", e.loaded, e.total, e));
-                I.func(ARG.postProgress) && request.upload.on(evtname[2], (e) => I.progress(ARG.postProgress, "", e.loaded, e.total, e));
-                ARG.upload && I.toArr(ARG.upload, (v) => request.upload.on(v[0], v[1]));
-                let formData,
-                    headers = ARG.headers || {};
-                if (ARG.overType)
-                    request.overrideMimeType(ARG.overType);
-
-                if (ARG.json) {
-                    formData = I.toJson(ARG.json);
-                    Object.assign(headers, {
-                        Accept: [
-                            F.getMime(texts[1]),
-                            F.getMime(texts[0]),
-                            "*/*"
-                        ].join()
-                    });
-                } else if (ARG.post) {
-                    formData = I.toPost(ARG.post);
-                }
-                if (ARG.type && ARG.type != heads)
-                    request.responseType = ARG.type;
-
-                request.open(!formData ? "GET" : "POST", I.toGet(ARG.url, {
-                    inajax: T.time
-                }, ARG.get));
-                I.toArr(headers, (entry) => request.setRequestHeader(entry[0], entry[1]));
-                request.send(formData);
-            });
+            return new CustomAjax(ARG).result;
         }
         async FetchCache(url, type, exp, dbName) {
             type = type || I.L(Blob);
@@ -1705,7 +1863,7 @@
         async unFile(u8, fn, ARG) {
             return new Decompress(Object.assign(ARG || {}, {
                 contents: u8,
-                onprogress: fn
+                progress: fn
             })).result;
         }
         customElement(myelement) {
@@ -1745,12 +1903,7 @@
                 data = {
                     detail: target
                 };
-
-            return (I.evt(type) ? T.dispatch(target, type) : T.dispatch(target, new CustomEvent(type, data)), target);
-        }
-        dispatch(obj, evt) {
-            return obj.dispatchEvent(evt),
-                obj;
+            target.dispatchEvent(new CustomEvent(type, data));
         }
         setClass(o) {
             o = o || new class extends EventTarget { };
@@ -1761,14 +1914,14 @@
         }
         onEvent(elm, evt, fun, opt, cap) {
             elm = T.$(elm);
-            evt.split(/\s+/).forEach((v) => elm.on(v, fun, opt === false ? {
+            I.Each(evt.split(/\s+/), v => elm.on(v, fun, opt === false ? {
                 passive: false
             } : opt, cap));
             return elm;
         }
         unEvent(elm, evt, fun, opt, cap) {
             elm = T.$(elm);
-            evt.split(/\s+/).forEach((v) => elm.un(v, fun, opt === false ? {
+            I.Each(evt.split(/\s+/), v => elm.un(v, fun, opt === false ? {
                 passive: false
             } : opt, cap));
             return elm;
@@ -1785,7 +1938,7 @@
             document.once("DOMContentLoaded", f);
         }
         $(e, f) {
-            return e ? (I.str(e) ?(f || document).querySelector(e): I.func(e) ? T.docload(e) : e) : undefined;
+            return e ? (I.str(e) ? (f || document).querySelector(e) : I.func(e) ? T.docload(e) : e) : undefined;
         }
         $$(e, f) {
             return (f || document).querySelectorAll(e) || [];
@@ -1834,20 +1987,16 @@
             return I.dElm(str, mime || document.contentType);
         }
         RF(action, data) {
-            const R = this,
-                A = R.action,
-                func = A[action];
-            return I.func(func) ? func.apply(R,data || []) : func;
+            const R = this,A = R.action[action];
+            return I.func(A) ? I.tryApply(R,A,data || []) : A;
 
         }
         CF(action, ...args) {
             return this.RF(action, args);
         }
         BF(action, ...a) {
-            const R = this,
-                A = R.action,
-                obj = a.shift();
-            return I.func(A[action]) ? a.length ? R.RF(action) : A[action].apply(obj,a):A[action];
+            const R = this,A = R.action[action],obj = a.shift();
+            return I.func(A) ? I.tryApply(obj,A,a): A;
         }
         getLang(name, arg) {
             return T.GL(name, arg);
@@ -1858,11 +2007,11 @@
 
             return arg ? T.toReplace(name, arg) : name;
         }
-        toReplace(str,arg){
-            if(I.str(arg)){
-                str=str.replace(/{value}/,arg);
-            }else if(I.obj(arg)){
-                I.toArr(arg,v=>str.replace(new RegExp(v[0], "g"),v[1]));
+        toReplace(str, arg) {
+            if (I.str(arg)) {
+                str = str.replace(/{value}/, arg);
+            } else if (I.obj(arg)) {
+                I.toArr(arg, v => str.replace(new RegExp(v[0], "g"), v[1]));
             }
             return str;
         }
@@ -1877,31 +2026,12 @@
             return styleMedia.matchMedium(str);
         }
         async toZip(files, progress, password) {
-            if (typeof zip === I.TP()) {
-                await T.loadLibjs(T.zipsrc, progress);
-            }
-            const zipFileWriter = new zip.BlobWriter();
-            const zipWriter = new zip.ZipWriter(zipFileWriter, {
-                password
-            });
-            if (!files)
-                return zipWriter;
-
-            if (!I.none(files.length)) {
-                I.toArr(files).map((file) => zipWriter.add(file.name, new zip.BlobReader(file), {
-                    onprogress: (current, total) => I.progress(progress, file.name, current, total)
-                }));
-            } else if (I.obj(files)) {
-                I.toArr(files).map((file) => zipWriter.add(file[0], new zip.Uint8ArrayReader(file[1]), {
-                    onprogress: (current, total) => I.progress(progress, file[0], current, total)
-                }));
-            } else {
-                return zipWriter;
-            }
-            await zipWriter.close({
-                onprogress: (current, total) => I.progress(progress, "enZip", current, total)
-            });
-            return await zipFileWriter.getData();
+            return new ZipCompress({
+                contents: files,
+                progress,
+                password,
+                pack: !0
+            }).result;
         }
         PostMessage(str) {
             var sw = this.sw;
@@ -1935,7 +2065,7 @@
             })
         }
         clearWorker(js) {
-            navigator.serviceWorker.getRegistrations().then(sws => sws.forEach(sw => {
+            navigator.serviceWorker.getRegistrations().then(sws => I.Each(sws, sw => {
                 if (sw.active) {
                     if (js && sw.active.scriptURL.includes(js))
                         sw.unregister();
@@ -1959,7 +2089,7 @@
                 let data = event.data;
                 if (T.isLocal) console.log(data);
                 if (I.obj(data)) {
-                    let { action, from } = data;
+                    let { action, from, id } = data;
                     if (action) {
                         if (I.str(action)) {
                             if (action == 'GETDBNAME') {
@@ -1971,16 +2101,16 @@
                                 })
                             }
                             let result = await T.CF(action, data);
-                            if (data.id) {
+                            if (id) {
                                 data.result = result;
                                 T.PostMessage(data);
                             } else {
                                 T.PostMessage(result);
                             }
-                        } else if (I.array(action)) {
-                            I.FM(action, (v) => [
-                                v, T[v] || win[v]
-                            ]);
+                        } else if (I.array(action) && id) {
+                            var result = I.Async(action.map(v => T.CF(v)));
+                            data.result = result;
+                            T.PostMessage(data);
                         }
                     } else if (from) {
                         T.CF(from, data);
@@ -2009,8 +2139,8 @@
                     this.dispatchEvent(new CustomEvent(evt, { detail }))
                 }
             });
-            var { language, serviceWorker,onLine} = navigator;
-            var {contentType,readyState,ontouchend,currentScript,characterSet} = document;
+            var { language, serviceWorker, onLine } = navigator;
+            var { contentType, readyState, ontouchend, currentScript, characterSet } = document;
             var src = currentScript && currentScript.src.split("?"),
                 JSpath = src && src[0].split("/").slice(0, -1).join("/") + "/",
                 langs = I.toLow(language).split("-");
@@ -2031,7 +2161,7 @@
                 language,
                 onLine,
                 readyState,
-                isTouch:I.hasOwnProp(HTMLElement,'ontouchstart'),
+                isTouch: I.hasOwnProp(HTMLElement, 'ontouchstart'),
                 ts: [
                     I.L(Text),
                     I.L(JSON),

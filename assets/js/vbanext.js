@@ -1375,14 +1375,18 @@ audio_latency = "256"`);
                         VBA.Module.toSaveCheat(VBA.cheats);
                         break;
                     case 'submit':
-                        var { pos, keyname } = $('.gba-cheat-edit').dataset;
-                        var title = $('.gba-cheat-edit input').value;
+                        var EditElm =  $('.gba-cheat-edit');
+                        var { pos, keyname } = EditElm.dataset;
+                        var title = $('input',EditElm).value;
                         if (!title) return;
-                        var value = $('.gba-cheat-edit textarea').value;
+                        var value = $('textarea',EditElm).value;
                         if (!value) return;
-                        if (keyname&&keyname != title) {
+                        if(VBA.cheats[title])keyname = title;
+                        if (keyname) {
                             delete VBA.cheats[keyname];
-                            $('.gba-cheat-list li[data-pos="' + pos + '"] span').innerHTML = `#${pos} ${title}`;
+                            var keyElm = $('.gba-cheat-list li[data-keyname="' + keyname + '"]');
+                            keyElm.dataset.keyname = title;
+                            $('span',keyElm).innerHTML = `#${pos} ${title}`;
                         } else {
                             cheatItem(title, $(`.gba-options-cheat`).dataset.len);
                             $(`.gba-options-cheat`).dataset.len += 1;
@@ -1390,12 +1394,12 @@ audio_latency = "256"`);
                         keyname = title;
                         VBA.cheats[keyname] = value;
                         VBA.Module.toSaveCheat(VBA.cheats);
-                        $('.gba-cheat-edit').hidden = !0;
+                        EditElm.hidden = !0;
                         $('.gba-cheat-list').hidden = !1;
-                        $('.gba-cheat-edit input').value = '';
-                        $('.gba-cheat-edit textarea').value = '';
-                        $('.gba-cheat-edit').dataset.pos = '';
-                        $('.gba-cheat-edit').dataset.keyname = '';
+                        $('input',EditElm).value = '';
+                        $('textarea',EditElm).value = '';
+                        EditElm.dataset.pos = '';
+                        EditElm.dataset.keyname = '';
                         break;
 
 
@@ -1417,7 +1421,6 @@ audio_latency = "256"`);
                 optbtn.dataset.act = 'open';
                 editbtn.dataset.act = 'edit';
                 deletebtn.dataset.act = 'del';
-
                 div.appendChild(optbtn);
                 div.appendChild(editbtn);
                 div.appendChild(deletebtn);
@@ -1433,7 +1436,7 @@ audio_latency = "256"`);
                     VBA.cheats = VBA.Module.toReadCheat();
                     var cheatlist = ToArr(VBA.cheats);
                     cheatlist.forEach((value, key) => cheatItem(value[0], key));
-                    $$('.gba-cheat-list button').forEach(elm => elm.on('pointerup', cheatButton));
+                    //$$('.gba-cheat-list button').forEach(elm => elm.on('pointerup', cheatButton));
                     this.dataset.len = cheatlist.length;
                     $('.gba-cheat-edit textarea').on('click', async function (e) {
                         if (!this.value) {
