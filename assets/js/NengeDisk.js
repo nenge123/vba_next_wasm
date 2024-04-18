@@ -2,27 +2,27 @@
 class NengeDisk {
     ready = [];
     RegExpPaths = [];
-    constructor(NAME,pathinfo,Module) {
+    constructor(NAME, pathinfo, Module) {
         this.pathinfo = pathinfo;
         this.dbName = NAME;
-        this.Store = typeof Nenge !='undefined'?Nenge.getStore(NAME):this.getIndexedDB(NAME);
-        if(Module)this.SetModule(Module);
+        this.Store = typeof Nenge != 'undefined' ? Nenge.getStore(NAME) : this.getIndexedDB(NAME);
+        if (Module) this.SetModule(Module);
     }
     SetModule(Module) {
-        Object.defineProperty(this,'Module',{get:()=>Module});
-        if(this.FS){
-            Object.keys(this.pathinfo).forEach(path=>{
-                this.RegExpPaths.push(new RegExp('^'+path.replace('/','\\/')));
+        Object.defineProperty(this, 'Module', { get: () => Module });
+        if (this.FS) {
+            Object.keys(this.pathinfo).forEach(path => {
+                this.RegExpPaths.push(new RegExp('^' + path.replace('/', '\\/')));
                 this.FS.mkdir(path);
-                this.FS.mount(this,{},path);
+                this.FS.mount(this, {}, path);
             })
         }
-        if(this.MEMFS){
+        if (this.MEMFS) {
             this.setMEMFS();
         }
     }
     get FS() {
-        return this.Module.FS||window.FS;
+        return this.Module.FS || window.FS;
     }
     get MEMFS() {
         return this.Module.MEMFS || this.FS.filesystems.MEMFS;
@@ -32,29 +32,29 @@ class NengeDisk {
     }
     getStore(mount) {
         var path = mount.mountpoint;
-        if(!path||!this.pathinfo[path])return;
+        if (!path || !this.pathinfo[path]) return;
         return this.Store.table(this.pathinfo[path]);
     }
     mount(mount) {
         this.ready.push(this.syncfs(mount))
         return this.MEMFS.mount.apply(null, arguments);
     }
-    async syncfs(mount, populate,callback) {
+    async syncfs(mount, populate, callback) {
         let D = this;
         let store = D.getStore(mount);
         let result;
-        if(store){
+        if (store) {
             if (!mount.isReady) {
                 //初始化
-                result = await this.loadFile(store).catch(e=>alert(e));
+                result = await this.loadFile(store).catch(e => alert(e));
                 mount.isReady = true;
             } else {
                 result = await D.syncWrite(store, mount);
             }
         }
-        if(location.host==='127.0.0.1')console.log('同步成功',result);
-        populate&&(populate instanceof Function) && populate('ok');
-        callback&&(callback instanceof Function) && callback('ok');
+        if (location.host === '127.0.0.1') console.log('同步成功:'+mount.mountpoint+'\n', result);
+        populate && (populate instanceof Function) && populate('ok');
+        callback && (callback instanceof Function) && callback('ok');
         return result;
     }
     async loadFile(store) {
@@ -62,22 +62,22 @@ class NengeDisk {
         return Object.entries(await store.cursor()).map(entry => D.storeLocalEntry(entry[0], entry[1])).join("\n");
     }
     IsOnSync = !1;
-    syncUpdate(steam,bool) {
-        if(steam&&steam.node&&steam.node.mount){
-            if(!this.toRegExp(steam.node.mount.mountpoint))return ;
+    syncUpdate(steam, bool) {
+        if (steam && steam.node && steam.node.mount) {
+            if (!this.toRegExp(steam.node.mount.mountpoint)) return;
         }
         this.IsOnSync = !0;
-        if(steam.fd!=null){
+        if (steam.fd != null) {
             clearTimeout(this.Timer);
-            return this.Timer = setTimeout(()=>this.syncUpdate(steam,!0),500);
+            return this.Timer = setTimeout(() => this.syncUpdate(steam, !0), 500);
         }
         this.IsOnSync = !1;
-        this.FS.syncfs(()=>{});
+        this.FS.syncfs(() => { });
     }
-    setMEMFS(MEMFS){
+    setMEMFS(MEMFS) {
         let D = this;
-        if(!this.MEMFS)Object.defineProperty(this.Module,'MEMFS',{get:()=>MEMFS});
-        else if(!MEMFS)MEMFS = D.MEMFS;
+        if (!this.MEMFS) Object.defineProperty(this.Module, 'MEMFS', { get: () => MEMFS });
+        else if (!MEMFS) MEMFS = D.MEMFS;
         MEMFS.stream_ops.write = function (stream, buffer, offset, length, position, canOwn) {
             if (D.HEAP8 && buffer.buffer === D.HEAP8.buffer) {
                 canOwn = false
@@ -111,35 +111,35 @@ class NengeDisk {
             node.usedBytes = Math.max(node.usedBytes, position + length);
             return length
         };
-        MEMFS.stream_ops.msync = function(steam){
-            console.log('msync同步?',steam);
+        MEMFS.stream_ops.msync = function (steam) {
+            console.log('msync同步?', steam);
             /*D.FS.syncfs(()=>console.log('同步'));*/
         }
         if (MEMFS.ops_table) MEMFS.ops_table.file.stream.write = MEMFS.stream_ops.write;
         if (MEMFS.ops_table) MEMFS.ops_table.file.stream.msync = MEMFS.stream_ops.msync;
         MEMFS.node_ops.unlink = function (parent, name) {
             delete parent.contents[name];
-            if(parent.mount&&parent.mount.isReady){
-                if(D.toRegExp(parent.mount.mountpoint)){
+            if (parent.mount && parent.mount.isReady) {
+                if (D.toRegExp(parent.mount.mountpoint)) {
                     clearTimeout(D.Timer);
-                    return D.Timer = setTimeout(()=>D.FS.syncfs(()=>{}),500);
+                    return D.Timer = setTimeout(() => D.FS.syncfs(() => { }), 500);
                 }
             }
         }
         if (MEMFS.ops_table) MEMFS.ops_table.dir.node.unlink = MEMFS.node_ops.unlink;
     }
-    setSyncEvent(){
+    setSyncEvent() {
         var D = this;
-        D.FS.trackingDelegate['onDeletePath'] = function(path){
-            if(D.toRegExp(path)){
+        D.FS.trackingDelegate['onDeletePath'] = function (path) {
+            if (D.toRegExp(path)) {
                 clearTimeout(D.Timer);
-                return D.Timer = setTimeout(()=>D.FS.syncfs(()=>{}),500);
+                return D.Timer = setTimeout(() => D.FS.syncfs(() => { }), 500);
             }
         };
-        D.FS.trackingDelegate["onWriteToFile"] = function(path){
-            if(D.toRegExp(path)){
+        D.FS.trackingDelegate["onWriteToFile"] = function (path) {
+            if (D.toRegExp(path)) {
                 clearTimeout(D.Timer);
-                return D.Timer = setTimeout(()=>D.FS.syncfs(()=>{}),500);
+                return D.Timer = setTimeout(() => D.FS.syncfs(() => { }), 500);
             }
         }
 
@@ -161,35 +161,31 @@ class NengeDisk {
                 removelist.push(entry[0]);
             }
         });
-        if(savelist.length||removelist.length){
-            var transaction = await store.write;
-            if(savelist.length){
+        if (savelist.length || removelist.length) {
+            var transaction = await store.write();
+            if (savelist.length) {
                 savelist = savelist.sort().map(
-                    path =>new Promise(
-                        re=>transaction.put(D.loadLocalEntry(path), path).addEventListener(
+                    path => new Promise(
+                        re => transaction.put(D.loadLocalEntry(path), path).addEventListener(
                             'success',
-                            function(e){
-                                re('indexdb write:'+path)
-                            }
+                            e => re('indexdb write:' + path)
                         )
                     )
                 );
             };
-            if(removelist.length){
+            if (removelist.length) {
                 removelist = removelist.sort().map(
-                    path =>new Promise(
-                        re=>transaction.delete(path).addEventListener(
+                    path => new Promise(
+                        re => transaction.delete(path).addEventListener(
                             'success',
-                            function(e){
-                                re('indexdb delete::'+path)
-                            }
+                            e => re('indexdb delete::' + path)
                         )
                     )
                 );
             }
             result = result.concat(await Promise.all(savelist)).concat(await Promise.all(removelist));
         }
-        this.log&&this.log(IsReady, result);
+        this.log && this.log(IsReady, result);
         return result.join("\n");
     }
     loadLocalEntry(path) {
@@ -222,7 +218,7 @@ class NengeDisk {
     storeLocalEntry(path, entry) {
         let D = this,
             FS = D.FS;
-        if(!entry||!entry.mode)return;
+        if (!entry || !entry.mode) return;
         if (FS.isDir(entry.mode)) {
             !FS.analyzePath(path).exists && FS.createPath('/', path, !0, !0)
         } else if (FS.isFile(entry.mode)) {
@@ -274,9 +270,9 @@ class NengeDisk {
             if (!bool && path == mountpoint) continue;
             if (!bool && path == mountpoint) continue;
             let stat = D.stat(path);
-            if(D.Filter&&D.Filter(path)) continue;
+            if (D.Filter && D.Filter(path)) continue;
             if (stat) {
-                if(!FS.isDir(stat.mode)){
+                if (!FS.isDir(stat.mode)) {
                     entries[path] = stat.mtime;
                 }
                 if (FS.isDir(stat.mode) && bool) {
@@ -372,83 +368,83 @@ class NengeDisk {
             });
         }
     }
-    toRegExp(path){
+    toRegExp(path) {
         var bool = !1;
-        this.RegExpPaths.forEach(v=>v.test(path)&&(bool=!0));
+        this.RegExpPaths.forEach(v => v.test(path) && (bool = !0));
         return bool;
     }
-    getIndexedDB(name){
+    getIndexedDB(name) {
         var D = this;
-        D._DB = new Promise(re=>{
-            var req = indexedDB.open(name||D.dbName);
-            req.onupgradeneeded = function(e){
+        D._DB = new Promise(re => {
+            var req = indexedDB.open(name || D.dbName);
+            req.onupgradeneeded = function (e) {
                 var db = e.target.result;
-                Object.keys(D.pathinfo).forEach(key=>{
-                    if(!db.objectStoreNames.contains(key)){
+                Object.keys(D.pathinfo).forEach(key => {
+                    if (!db.objectStoreNames.contains(key)) {
                         var store = db.createObjectStore(key);
-                        store.createIndex('timestamp','timestamp', {unique: false});
+                        store.createIndex('timestamp', 'timestamp', { unique: false });
                     }
                 })
             }
-            req.onsuccess = function(e){
+            req.onsuccess = function (e) {
                 re(req.result);
             }
         });
         return new class {
-            async transaction(table, ReadMode){
+            async transaction(table, ReadMode) {
                 return (await D._DB).transaction([table], ReadMode ? undefined : "readwrite").objectStore(table);
             }
             tables = {}
-            table(table){
-                if(this.tables[table])return this.tables[table];
-                return new(class{
-                    constructor(IDB,table){
-                        Object.assign(this,{IDB,table});
+            table(table) {
+                if (this.tables[table]) return this.tables[table];
+                return new (class {
+                    constructor(IDB, table) {
+                        Object.assign(this, { IDB, table });
                         IDB.tables[table] = this;
                     }
-                    async transaction(ReadMode){
-                        return this.IDB.transaction(table,ReadMode)
+                    async transaction(ReadMode) {
+                        return this.IDB.transaction(table, ReadMode)
                     }
-                    get read(){
+                    read() {
                         return this.transaction(!0)
                     }
-                    get write(){
+                    write() {
                         return this.transaction(!1)
                     }
-                    put(data,path){
-                        return new Promise(async re=>{
-                            (await this.write).put(data,path).onsuccess = function(e){re(e.target.result)};
+                    put(data, path) {
+                        return new Promise(async re => {
+                            (await this.write()).put(data, path).onsuccess = function (e) { re(e.target.result) };
                         });
                     }
-                    delete(path){
-                        return new Promise(async re=>{
-                            (await this.write).delete(data,path).onsuccess = function(e){re(e.target.result)};
+                    delete(path) {
+                        return new Promise(async re => {
+                            (await this.write()).delete(data, path).onsuccess = function (e) { re(e.target.result) };
                         });
                     }
-                    get(path){
-                        return new Promise(async re=>{
-                            (await this.read).get(data,path).onsuccess = function(e){re(e.target.result)};
+                    get(path) {
+                        return new Promise(async re => {
+                            (await this.read()).get(data, path).onsuccess = function (e) { re(e.target.result) };
                         });
                     }
-                    cursor(keyname,query, direction){
-                        return new Promise(async re=>{
-                            var data = {},db = await this.read,odb;
-                            if(keyname)odb = db.index(keyname).openKeyCursor(query, direction);
+                    cursor(keyname, query, direction) {
+                        return new Promise(async re => {
+                            var data = {}, db = await this.read(), odb;
+                            if (keyname) odb = db.index(keyname).openKeyCursor(query, direction);
                             else odb = db.openCursor(query, direction);
-                            odb.onsuccess = function(e){
+                            odb.onsuccess = function (e) {
                                 var result = e.target.result;
-                                if(result){
-                                    var {primaryKey,key,value} = result;
-                                    data[primaryKey] = value===undefined?key:value;
+                                if (result) {
+                                    var { primaryKey, key, value } = result;
+                                    data[primaryKey] = value === undefined ? key : value;
                                     result.continue();
-                                }else{
+                                } else {
                                     re(data);
                                 }
                             };
                         });
                     }
 
-                })(this,table)
+                })(this, table)
             }
         }
     }

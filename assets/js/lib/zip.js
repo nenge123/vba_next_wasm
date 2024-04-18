@@ -3043,6 +3043,12 @@
 		if (Array.isArray(reader)) {
 			reader = new SplitDataReader(reader);
 		}
+		if(reader instanceof Blob){
+			reader = new BlobReader(reader);
+		}
+		if((reader.buffer||reader) instanceof ArrayBuffer){
+			reader = new Uint8ArrayReader(reader.buffer||reader);
+		}
 		if (reader instanceof ReadableStream) {
 			reader = {
 				readable: reader
@@ -3052,6 +3058,7 @@
 	}
 
 	function initWriter(writer) {
+		if(!writer)writer = new Uint8ArrayWriter();
 		if (writer.writable === UNDEFINED_VALUE && typeof writer.next == FUNCTION_TYPE$1) {
 			writer = new SplitDataWriter(writer);
 		}
@@ -3295,7 +3302,6 @@
 	};
 
 	class ZipReader {
-
 		constructor(reader, options = {}) {
 			Object.assign(this, {
 				reader: initReader(reader),
@@ -3303,7 +3309,6 @@
 				config: getConfiguration()
 			});
 		}
-
 		async* getEntriesGenerator(options = {}) {
 			const zipReader = this;
 			let { reader } = zipReader;
@@ -4173,6 +4178,9 @@
 				await writeData(writable, signatureArray);
 				zipWriter.offset += 4;
 			}
+			if (usdz) {
+				appendExtraFieldUSDZ(entryInfo, zipWriter.offset - diskOffset);
+			}
 			if (!bufferedWrite) {
 				await lockPreviousFileEntry;
 				await skipDiskIfNeeded(writable);
@@ -4180,9 +4188,6 @@
 			const { diskNumber } = writer;
 			writingEntryData = true;
 			fileEntry.diskNumberStart = diskNumber;
-			if (usdz) {
-				appendExtraFieldUSDZ(entryInfo, zipWriter.offset - diskOffset);
-			}
 			fileEntry = await createFileEntry(reader, fileWriter, fileEntry, entryInfo, zipWriter.config, options);
 			writingEntryData = false;
 			files.set(name, fileEntry);

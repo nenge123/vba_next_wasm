@@ -56,7 +56,7 @@
         Imgages_URL = [];
     }
     function GetName(name) {
-        return F.getname(name);
+        return F.getName(name);
     }
     function GetExt(name) {
         return F.getExt(name);
@@ -114,6 +114,12 @@
          * 载入对象
          * @param {Object} emu 
          */
+        RuntimeResult = new Promise(re=>{
+            /**
+             * WASM加载完毕
+             */
+            this._RuntimeResult = re;
+        })
         constructor(emu,progress) {
             var { MountConfig, FSROOT, EXTREGX, corename, isPWA} = emu;
             emu.Module = this;
@@ -124,12 +130,6 @@
                 corename,
                 EXTREGX,
                 isPWA,
-                isRuntimeInitialized:new Promise(re=>{
-                    /**
-                     * WASM加载完毕
-                     */
-                    this._isRuntimeInitialized = re;
-                }),
                 canvas: emu.canvas || document.querySelector('canvas'),
                 print: (e) => console.log(e),
                 printErr: (e) => {
@@ -210,10 +210,10 @@
                 exports.EmulatorJS_(this);
                 await this.ready;
                 this.toWriteStart();
-                this._isRuntimeInitialized(!1);
-                return !1;
+                this._RuntimeResult(this);
+            }else{
+                this._RuntimeResult();
             }
-            this._isRuntimeInitialized(!0);
         }
         /**
          * PWA虚假地址加载 本地跳过
@@ -224,8 +224,23 @@
              * 部署虚假地址
              */
             var asmJS = JSpath + this.corename + '/retroarch.js';
-            if (!this.isLocal) {
-                asmJS = JSpath + this.corename + '/retroarch.min.js?pack=getcore';
+            if (this.isLocal) {
+                T.action['pwa_down_retroarch'] = data=>{
+                    if(data.state){
+                        var {current, total, filename, type} = data.state;
+                        var text;
+                        if(type=='fetch'){
+                            text = '下载'+filename;
+                        }
+                        if(type=='fetch'){
+                            text = '解压'+filename;
+                        }
+                        progress(text+I.PER(current, total));
+
+
+                    }
+                }
+                asmJS = JSpath + this.corename + '/retroarch.min.js?pack=loader';
             }
             await T.addJS(asmJS);
         }
@@ -828,6 +843,7 @@ audio_latency = "256"`);
          * @returns 
          */
         async welcome() {
+            let sw = await T.SWREADY;
             /**设置 数据库管理 */
             var VBA = this;
             $('.wel-index').hidden = !0;
@@ -840,10 +856,7 @@ audio_latency = "256"`);
                  stateTips.innerHTML = '检测到你是苹果手机.<br>请点击状态栏的"更多"<br>下翻后的"添加到主屏幕".';
                 return;
             }
-            if (VBA.isPWA) {
-                    stateTips.innerHTML = 'serviceWorker 未完全加载!<br>稍后替你刷新页面!<br>核心下载过慢可以打开手游加速器,毕竟Github服务器在国内容易大姨妈';
-                    await T.PWAReady;
-            }
+            await T.SWREADY;
             stateTips.remove();
             $('.wel-index').hidden = !1;
             /**
@@ -854,11 +867,11 @@ audio_latency = "256"`);
                 if(this.dataset.act=='worker'){
                     this.disabled = !0;
                     this.innerHTML = '请稍等,当更新完毕刷新页面';
-                    T.action['pwa_upatecaches'] = e=>{
-                        this.innerHTML = '缓存已更新';
-                        location.reload();
-                    };
-                    T.PostMessage({action:'UPDATE CACHES'});
+                    let sw = await  navigator.serviceWorker.ready;
+                    await sw.update();
+                    let res = await fetch('update-cache/');
+                    await res.text();
+                    location.reload();
                     return;
                 }
                 var table = this.dataset.db;
@@ -924,18 +937,18 @@ audio_latency = "256"`);
                  */
                 switch (VBA.corename) {
                     case 'vbanext':
-                        STORE = MyTable('rooms').index('system').cursor('timestamp', IDBKeyRange.only('gba'));
-                        images = MyTable('images').index('system').cursor(undefined, IDBKeyRange.only('gba'));
+                        STORE = MyTable('rooms').index('system',IDBKeyRange.only('gba'));
+                        images = MyTable('images').index('system',IDBKeyRange.only('gba'));
                         CorePath = 'VBA Next/';
                         break;
                     case 'mgba':
-                        STORE = MyTable('rooms').cursor('timestamp');
-                        images = MyTable('images').cursor();
+                        STORE = MyTable('rooms');
+                        images = MyTable('images');
                         CorePath = 'mGBA/';
                         break;
                     case 'gb':
-                        STORE = MyTable('rooms').index('system').cursor('timestamp', IDBKeyRange.only('gb'));
-                        images = MyTable('images').index('system').cursor(undefined, IDBKeyRange.only('gb'));
+                        STORE = MyTable('rooms').index('system',IDBKeyRange.only('gb'));
+                        images = MyTable('images').index('system',IDBKeyRange.only('gb'));
                         CorePath = 'Gambatte/';
                         break;
                 }
@@ -949,14 +962,15 @@ audio_latency = "256"`);
                 /**
                  * 加载模拟器Module类
                  */
-                var Module = new emuModulle(VBA,TXT => progressElm.innerHTML = TXT);
-                if(await Module.isRuntimeInitialized){
+                var Module = await (new emuModulle(VBA,TXT => progressElm.innerHTML = TXT)).RuntimeResult;
+                if(!Module){
                     progressElm.innerHTML = '模拟器核心下载失败,请确保已经联网!下载过慢建议下载加速器加速任意外服游戏!';
                     return;
                 }
                 progressElm.remove();
-                images = await images;
-                ToArr(await STORE, rooms => {
+                images = await images.cursor();
+                console.log(images);
+                ToArr(await STORE.cursor('timestamp'), rooms => {
                     var [name, time] = rooms;
                     var imageshtml = '';
                     var sorttime = [time];
@@ -971,7 +985,7 @@ audio_latency = "256"`);
                         }
                     });
                     if (imageshtml) imageshtml = `<ul class="wel-game-item">${imageshtml}</ul>`;
-                    li.style.order = T.time - (sorttime.sort().pop()).getTime();
+                    li.style.order = Date.now() - (sorttime.sort().pop()).getTime();
                     li.innerHTML += imageshtml;
                     var btn = document.createElement('button');
                     var p = document.createElement('p');
@@ -989,6 +1003,7 @@ audio_latency = "256"`);
                     });
                     gamelist.appendChild(li);
                 });
+                console.log(Module);
                 images = null;
                 STORE = null;
                 $('.wel-start-ready').hidden = !1;
@@ -1947,42 +1962,26 @@ audio_latency = "256"`);
                  * @param {json} data worker消息
                  * @returns {boolean}
                  */
-                async getcore(data){
-                    var {url} = data;
+                async pack_getcore(data){
                     var Module = VBA.Module;
-                    var files = await T.FetchItem({
-                        url: JSpath + Module.corename + '/' + Module.corename + '.zip',
-                        unpack: !0,
+                    return await T.CF('pack_zip',data,{
                         progress:(e)=>{
                             if(isLocal)console.log(e);
                             $('.download-progress').innerHTML = e;
                         },
+                        url:JSpath + Module.corename + '/' + Module.corename + '.zip',
+                        //'http://127.0.0.1/github/vbanextWasm/assets/js/gb/gb.zip',
                         unpackText:'解压:',
                         downText:'下载:'
+
                     });
-                    var CACHE = await caches.open('GBA-WASM');
-                    var filename = GetName(url);
-                    await Promise.all(ToArr(files).map(entry => {
-                        var ext = GetExt(entry[0]);
-                        var mime = "application/" + (ext == "js" ? "javascript" : "wasm");
-                        var path = ext == 'js' ? url : url.replace(/(\.min)?\.js.+$/, '.wasm');
-                        var file = new File([entry[1]], entry[0], { type: mime });
-                        var reponse = new Response(
-                            file,
-                            {
-                                headers: {
-                                    "Content-Type": file.type, "Content-Length": file.size,
-                                    'Date': new Date().toGMTString()
-                                }
-                            });
-                        return CACHE.put(path, reponse);
-                    }));
-                    return !0;
-                }
+                },
             });
             isPWA = !0;
-            T.openServiceWorker('sw.js');
+            T.SWREADY = new Promise(back=>T.SW.open('sw.js',sw=>back(sw)));
         }
+    }else{
+            return;
     }
     Object.assign(gbawasm.prototype, {
         isIPhone,
